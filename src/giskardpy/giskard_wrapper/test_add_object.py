@@ -16,7 +16,7 @@ def add_object():
         body.type = 1
         body.name = "cuboid_cup"
         body.shape.type = 1
-        body.shape.dimensions = [0.1, 0.4, 0.1]
+        body.shape.dimensions = [0.1, 0.1, 0.2]
         #body.shape.dimensions[1] = 1.8
         #body.shape.dimensions[2] = 1.0
 
