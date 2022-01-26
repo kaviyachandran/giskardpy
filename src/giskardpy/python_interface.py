@@ -16,7 +16,7 @@ from tf.transformations import quaternion_multiply
 from giskardpy.constraints import WEIGHT_BELOW_CA, WEIGHT_ABOVE_CA
 from giskardpy.urdf_object import URDFObject
 from giskardpy.utils import position_dict_to_joint_states, make_world_body_box, make_world_body_cylinder, \
-     to_joint_state_position_dict, to_tf_quaternion
+    to_joint_state_position_dict, to_tf_quaternion
 from rospy_message_converter.message_converter import convert_ros_message_to_dictionary
 
 
@@ -363,6 +363,33 @@ class GiskardWrapper(object):
             kwargs[u'weight'] = weight
         kwargs[u'goal_point'] = goal_point
         self.set_json_goal(u'Pointing', **kwargs)
+
+    def cartesian_space_limit(self, tip_link, goal_pose, upper_limit, lower_limit, root_link=None, weight=None):
+        """
+        Limits the position of the tip link within the given upper and lower limits while moving to a
+        goal pose
+        :param tip_link: name of the tip of the kin chain
+        :type tip_link: str
+        :param goal_pose: where the tip link is moving to
+        :type goal_pose: PoseStamped
+        :param root_link: name of the root of the kin chain
+        :type root_link: str
+        :param upper_limit: upper limits in the cartesian space
+        :type upper_limit: PointStamped
+        :param lower_limit: upper limits in the cartesian space
+        :type lower_limit: PointStamped
+        :param weight: default WEIGHT_BELOW_CA
+        :type weight: float
+        """
+        kwargs = {u'tip_link': tip_link,
+                  u'goal_pose': goal_pose,
+                  u'upper_limit': upper_limit,
+                  u'lower_limit': lower_limit}
+        if root_link is not None:
+            kwargs[u'root_link'] = root_link
+        if weight is not None:
+            kwargs[u'weight'] = weight
+        self.set_json_goal(u'CartesianSpaceLimit', **kwargs)
 
     def set_json_goal(self, constraint_type, **kwargs):
         """

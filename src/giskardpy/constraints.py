@@ -2391,3 +2391,62 @@ class Close(Constraint):
     def make_constraints(self):
         for constraint in self.constraints:
             self.soft_constraints.update(constraint.get_constraints())
+
+
+class CartesianSpaceLimit(Constraint):
+
+    def __init__(self, godmap,
+                 root_link,
+                 tip_link,
+                 goal_pose, ## PoseStamped
+                 lower_limit= 0,      ##[0.0, 0.0, 0.7],
+                 upper_limit= 2.0, ### [1e9, 1.0, 1.5],
+                 weight=WEIGHT_BELOW_CA,
+                 goal_constraint=False):
+        super(CartesianSpaceLimit, self).__init__(godmap, root_link, tip_link, goal_pose, lower_limit,upper_limit, weight, goal_constraint)
+
+        if root_link is None:
+            self.root = self.get_robot().get_root()
+        self.tip = tip_link;
+        self.goal_constraint = goal_constraint
+        self.upper_limit=upper_limit
+        self.lower_limit=lower_limit
+      # self.constraints = []
+    def make_constraints(self):
+        root_T_tip = self.get_fk(self.root, self.tip)
+        root_P_tip = w.position_of(root_T_tip)
+        weight = self.get_input_float(self.weight)
+
+        self.add_constraint(CartesianPosition(god_map=self.god_map,
+                                root_link=self.root_link,
+                                tip_link=self.tip,
+                                goal=self.goal_pose,
+                                weight=weight,
+                                goal_constraint=self.goal_constraint))
+
+        self.add_constraint(u'x',
+                            weight=weight,
+                            expression=root_P_tip[0],
+                            goal_constraint=False,
+                            lower_limit=self.lower_limit,
+                            upper_limit=self.upper_limit)
+
+        self.add_constraint(u'y',
+                            weight=weight,
+                            expression=root_P_tip[1],
+                            goal_constraint=False,
+                            lower_limit=self.lower_limit,
+                            upper_limit=self.upper_limit
+                            )
+        self.add_constraint(u'z',
+                            weight=weight,
+                            expression=root_P_tip[2],
+                            goal_constraint=False,
+                            lower_limit=self.lower_limit,
+                            upper_limit=self.upper_limit
+                            )
+
+    def __str__(self):
+        # helps to make sure your constraint name is unique.
+        s = super(CartesianSpaceLimit, self).__str__()
+        return u'{}/{}/{}'.format(s, self.root, self.tip)

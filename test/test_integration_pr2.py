@@ -26,7 +26,6 @@ from rospy_message_converter.message_converter import convert_dictionary_to_ros_
 from utils_for_tests import PR2, compare_poses
 from iai_naive_kinematics_sim.srv import UpdateTransform
 
-
 # TODO roslaunch iai_pr2_sim ros_control_sim_with_base.launch
 # TODO roslaunch iai_kitchen upload_kitchen_obj.launch
 
@@ -402,11 +401,11 @@ class TestConstraints(object):
         linear_velocity = 1
         angular_velocity = 1
         zero_pose.wrapper.limit_cartesian_velocity(
-                                root_link=zero_pose.default_root,
-                                tip_link=u'base_footprint',
-                                max_linear_velocity=0.1,
-                                max_angular_velocity=0.2
-                                )
+            root_link=zero_pose.default_root,
+            tip_link=u'base_footprint',
+            max_linear_velocity=0.1,
+            max_angular_velocity=0.2
+        )
         goal_position = PoseStamped()
         goal_position.header.frame_id = u'r_gripper_tool_frame'
         goal_position.pose.position.x = 1
@@ -683,6 +682,24 @@ class TestConstraints(object):
         expected_x = tf.lookup_point(tip, kitchen_setup.r_tip)
         np.testing.assert_almost_equal(expected_x.point.y, 0, 2)
         np.testing.assert_almost_equal(expected_x.point.z, 0, 2)
+
+    def test_cartesian_space_limit(self, kitchen_setup):
+        base_goal = PoseStamped()
+        base_goal.header.frame_id = u'base_footprint'
+        base_goal.pose.position.y = -1
+        base_goal.pose.orientation.w = 1
+        kitchen_setup.teleport_base(base_goal)
+
+        tip = u"l_gripper_tool_frame"
+        goal_pose = PoseStamped()
+        goal_pose.header.frame_id = u'base_footprint'
+        goal_pose.pose.position.x = 0.89
+        goal_pose.pose.orientation.w = 1
+        lower_limit= 0,
+        upper_limit=2.5,
+        ##cartesian_space_limit(self, tip_link, goal_pose, upper_limit, lower_limit, root_link=None, weight=None)
+        kitchen_setup.wrapper.cartesian_space_limit(tip_link=tip, goal_pose=goal_pose, upper_limit=upper_limit, lower_limit=lower_limit)
+        kitchen_setup.send_and_check_goal()
 
     def test_align_planes1(self, zero_pose):
         """
@@ -1099,11 +1116,11 @@ class TestConstraints(object):
         tip_grasp_axis.vector.z = 1
 
         kitchen_setup.wrapper.grasp_bar(root_link=kitchen_setup.default_root,
-                                    tip_link=kitchen_setup.r_tip,
-                                    tip_grasp_axis=tip_grasp_axis,
-                                    bar_center=bar_center,
-                                    bar_axis=bar_axis,
-                                    bar_length=.3)
+                                        tip_link=kitchen_setup.r_tip,
+                                        tip_grasp_axis=tip_grasp_axis,
+                                        bar_center=bar_center,
+                                        bar_axis=bar_axis,
+                                        bar_length=.3)
         kitchen_setup.allow_collision([], u'kitchen', [u'sink_area_dish_washer_door_handle'])
         # kitchen_setup.allow_all_collisions()
         kitchen_setup.send_and_check_goal()
