@@ -921,7 +921,6 @@ class BasicCartesianConstraint(Constraint):
 
 class CartesianPosition(BasicCartesianConstraint):
 
-
     def __init__(self, god_map, root_link, tip_link, goal, max_velocity=0.1, max_acceleration=0.1,
                  weight=WEIGHT_ABOVE_CA, goal_constraint=False):
         """
@@ -2089,7 +2088,8 @@ class OpenDoor(Constraint):
     hinge0_P_tipStart_norm_id = u'hinge0_P_tipStart_norm'
     weight_id = u'weight'
 
-    def __init__(self, god_map, tip_link, object_name, object_link_name, angle_goal, root_link=None, weight=WEIGHT_ABOVE_CA):
+    def __init__(self, god_map, tip_link, object_name, object_link_name, angle_goal, root_link=None,
+                 weight=WEIGHT_ABOVE_CA):
         super(OpenDoor, self).__init__(god_map)
 
         if root_link is None:
@@ -2195,7 +2195,8 @@ class OpenDoor(Constraint):
         projection = w.dot(hinge0_P_tipCurrent.T, hinge_V_hinge_axis)
         hinge0_P_tipCurrentProjected = hinge0_P_tipCurrent - hinge_V_hinge_axis * projection
 
-        current_tip_angle_projected = np.sign(self.angle_goal) * w.angle_between_vector(hinge0_P_tipStartProjected, hinge0_P_tipCurrentProjected)
+        current_tip_angle_projected = np.sign(self.angle_goal) * w.angle_between_vector(hinge0_P_tipStartProjected,
+                                                                                        hinge0_P_tipCurrentProjected)
 
         hinge0_T_hingeCurrent = w.rotation_matrix_from_axis_angle(hinge_V_hinge_axis, current_tip_angle_projected)
 
@@ -2215,7 +2216,8 @@ class OpenDrawer(Constraint):
     hinge_V_hinge_axis_msg_id = u'hinge_axis'  # axis vector of the hinge
     root_T_tip_goal_id = u'root_T_tipGoal'  # goal of the gripper tip (where to move)
 
-    def __init__(self, god_map, tip_link, object_name, object_link_name, distance_goal, root_link=None, weight=WEIGHT_ABOVE_CA):
+    def __init__(self, god_map, tip_link, object_name, object_link_name, distance_goal, root_link=None,
+                 weight=WEIGHT_ABOVE_CA):
         """
         :type tip_link: str
         :param tip_link: tip of manipulator (gripper) which is used
@@ -2396,54 +2398,54 @@ class Close(Constraint):
 class CartesianSpaceLimit(Constraint):
 
     def __init__(self, godmap,
-                 root_link,
                  tip_link,
-                 goal_pose, ## PoseStamped
-                 lower_limit= 0,      ##[0.0, 0.0, 0.7],
-                 upper_limit= 2.0, ### [1e9, 1.0, 1.5],
+                 lower_limit=0,  ##[0.0, 0.0, 0.7],
+                 upper_limit=2.0,  ### [1e3, 1.0, 1.5],
                  weight=WEIGHT_BELOW_CA,
+                 root_link=None,
                  goal_constraint=False):
-        super(CartesianSpaceLimit, self).__init__(godmap, root_link, tip_link, goal_pose, lower_limit,upper_limit, weight, goal_constraint)
+        super(CartesianSpaceLimit, self).__init__(godmap)
 
         if root_link is None:
             self.root = self.get_robot().get_root()
-        self.tip = tip_link;
+        self.tip = tip_link
         self.goal_constraint = goal_constraint
-        self.upper_limit=upper_limit
-        self.lower_limit=lower_limit
-      # self.constraints = []
+        self.upper_limit = w.Matrix([upper_limit, upper_limit, upper_limit])
+        self.lower_limit = w.Matrix([lower_limit, lower_limit, lower_limit])
+        ##self.goal = goal_pose
+        self.weight = weight
+
+    # self.constraints = []
+
     def make_constraints(self):
         root_T_tip = self.get_fk(self.root, self.tip)
         root_P_tip = w.position_of(root_T_tip)
+        
         weight = self.get_input_float(self.weight)
-
-        self.add_constraint(CartesianPosition(god_map=self.god_map,
-                                root_link=self.root_link,
-                                tip_link=self.tip,
-                                goal=self.goal_pose,
-                                weight=weight,
-                                goal_constraint=self.goal_constraint))
+        t = self.get_input_sampling_period()
+        ll = (self.lower_limit - root_P_tip[0:3]) / t
+        ul = (self.upper_limit - root_P_tip[0:3]) / t
 
         self.add_constraint(u'x',
                             weight=weight,
                             expression=root_P_tip[0],
                             goal_constraint=False,
-                            lower_limit=self.lower_limit,
-                            upper_limit=self.upper_limit)
+                            lower=ll[0],
+                            upper=ul[0])
 
         self.add_constraint(u'y',
                             weight=weight,
                             expression=root_P_tip[1],
                             goal_constraint=False,
-                            lower_limit=self.lower_limit,
-                            upper_limit=self.upper_limit
+                            lower=ll[1],
+                            upper=ul[1]
                             )
         self.add_constraint(u'z',
                             weight=weight,
                             expression=root_P_tip[2],
                             goal_constraint=False,
-                            lower_limit=self.lower_limit,
-                            upper_limit=self.upper_limit
+                            lower=ll[2],
+                            upper=ul[2]
                             )
 
     def __str__(self):

@@ -698,8 +698,21 @@ class TestConstraints(object):
         lower_limit= 0,
         upper_limit=2.5,
         ##cartesian_space_limit(self, tip_link, goal_pose, upper_limit, lower_limit, root_link=None, weight=None)
-        kitchen_setup.wrapper.cartesian_space_limit(tip_link=tip, goal_pose=goal_pose, upper_limit=upper_limit, lower_limit=lower_limit)
-        kitchen_setup.send_and_check_goal()
+        kitchen_setup.wrapper.cartesian_space_limit(tip_link=tip)
+        #kitchen_setup.send_and_check_goal()
+
+        base_goal = PoseStamped()
+        base_goal.header.frame_id = u'base_footprint'
+        base_goal.pose.position.y = 2
+        base_goal.pose.orientation = Quaternion(*quaternion_about_axis(1, [0, 0, 1]))
+        kitchen_setup.add_json_goal(u'CartesianVelocityLimit',
+                                    root_link=kitchen_setup.default_root,
+                                    tip_link=u'',
+                                    max_linear_velocity=0.1,
+                                    max_angular_velocity=0.2
+                                    )
+        kitchen_setup.set_joint_goal(gaya_pose)
+        kitchen_setup.move_base(base_goal)
 
     def test_align_planes1(self, zero_pose):
         """
