@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import rospy
 
 from giskard_msgs.srv import UpdateWorld
@@ -16,7 +17,7 @@ def add_object():
         body.type = 1
         body.name = "cuboid_cup"
         body.shape.type = 1
-        body.shape.dimensions = [0.1, 0.1, 0.2]
+        body.shape.dimensions = [0.1, 0.5, 0.1]
         #body.shape.dimensions[1] = 1.8
         #body.shape.dimensions[2] = 1.0
 
@@ -25,14 +26,16 @@ def add_object():
         pose_w_object.header.stamp = rospy.Time.now()
         pose_w_object.header.frame_id = "map"
 
-        pose_w_object.pose.position.x = 1.5
-        pose_w_object.pose.position.y = 1.5
-        pose_w_object.pose.position.z = 1.5
+        pose_w_object.pose.position.x = 0.94
+        pose_w_object.pose.position.y = -0.18
+        pose_w_object.pose.position.z = 1.08
 
         pose_w_object.pose.orientation.x = 0
         pose_w_object.pose.orientation.y = 0
         pose_w_object.pose.orientation.z = 0
         pose_w_object.pose.orientation.w = 1
+
+
 
         response = add_object_client(operation, body, rigidly_attached, pose_w_object)
         print("response : ", response.error_codes)

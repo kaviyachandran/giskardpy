@@ -1,6 +1,7 @@
 from __future__ import division
 
 import itertools
+##from Cython.Includes.cpython.array import zero
 from copy import deepcopy
 
 import numpy as np
@@ -683,18 +684,21 @@ class TestConstraints(object):
         np.testing.assert_almost_equal(expected_x.point.y, 0, 2)
         np.testing.assert_almost_equal(expected_x.point.z, 0, 2)
 
-    def test_cartesian_space_limit(self, kitchen_setup):
+    def test_cartesian_space_limit(self, kitchen_setup, zero_pose):
+        ### Get the current pose of the end-effector
         base_goal = PoseStamped()
         base_goal.header.frame_id = u'base_footprint'
         base_goal.pose.position.y = -1
         base_goal.pose.orientation.w = 1
-        kitchen_setup.teleport_base(base_goal)
+        #kitchen_setup.teleport_base(base_goal)
 
-        tip = u"l_gripper_tool_frame"
-        goal_pose = PoseStamped()
-        goal_pose.header.frame_id = u'base_footprint'
-        goal_pose.pose.position.x = 0.89
-        goal_pose.pose.orientation.w = 1
+        relative_pose = zero_pose.get_robot().get_fk_pose(kitchen_setup.default_root, zero_pose.r_tip).pose
+        print(relative_pose)
+        print(kitchen_setup.r_tip)
+        print(kitchen_setup.default_root)
+
+
+        tip = u"r_gripper_tool_frame"
         lower_limit= 0,
         upper_limit=2.5,
         ##cartesian_space_limit(self, tip_link, goal_pose, upper_limit, lower_limit, root_link=None, weight=None)
@@ -703,16 +707,23 @@ class TestConstraints(object):
 
         base_goal = PoseStamped()
         base_goal.header.frame_id = u'base_footprint'
-        base_goal.pose.position.y = 2
+        base_goal.pose.position.x = 0.941
+        base_goal.pose.position.y = -0.5
+        base_goal.pose.position.z = 1.08
         base_goal.pose.orientation = Quaternion(*quaternion_about_axis(1, [0, 0, 1]))
         kitchen_setup.add_json_goal(u'CartesianVelocityLimit',
                                     root_link=kitchen_setup.default_root,
-                                    tip_link=u'',
+                                    tip_link=tip,
                                     max_linear_velocity=0.1,
                                     max_angular_velocity=0.2
                                     )
-        kitchen_setup.set_joint_goal(gaya_pose)
-        kitchen_setup.move_base(base_goal)
+        kitchen_setup.set_joint_goal(default_pose)
+        relative_pose = zero_pose.get_robot().get_fk_pose(kitchen_setup.default_root, zero_pose.r_tip).pose
+        print(relative_pose)
+        kitchen_setup.set_and_check_cart_goal(base_goal, kitchen_setup.r_tip, u'base_footprint',
+                                           weight=WEIGHT_BELOW_CA)
+        #zero_pose.set_translation_goal(base_goal, zero_pose.r_tip)
+        #zero_pose.send_and_check_goal()
 
     def test_align_planes1(self, zero_pose):
         """

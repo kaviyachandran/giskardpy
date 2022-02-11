@@ -168,7 +168,7 @@ class GiskardWrapper(object):
     def set_joint_goal(self, goal_state, weight=None, max_velocity=None):
         """
         This goal will move the robots joint to the desired configuration.
-        :param goal_state: Can either be a joint state messages or a dict mapping joint name to position. 
+        :param goal_state: Can either be a joint state messages or a dict mapping joint name to position.
         :type goal_state: Union[JointState, dict]
         :param weight: default WEIGHT_BELOW_CA
         :type weight: float
