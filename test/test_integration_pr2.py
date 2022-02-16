@@ -690,37 +690,40 @@ class TestConstraints(object):
         base_goal.header.frame_id = u'base_footprint'
         base_goal.pose.position.y = -1
         base_goal.pose.orientation.w = 1
+        ### Moves the base to some location
         #kitchen_setup.teleport_base(base_goal)
 
-        relative_pose = zero_pose.get_robot().get_fk_pose(kitchen_setup.default_root, zero_pose.r_tip).pose
-        print(relative_pose)
-        print(kitchen_setup.r_tip)
-        print(kitchen_setup.default_root)
 
-
-        tip = u"r_gripper_tool_frame"
-        lower_limit= 0,
-        upper_limit=2.5,
+        ### gives the pose w.r.t root
+        relative_pose = zero_pose.get_robot().get_fk_pose(kitchen_setup.default_root, zero_pose.l_tip).pose
+        tip = kitchen_setup.l_tip
+        print(relative_pose, tip)
         ##cartesian_space_limit(self, tip_link, goal_pose, upper_limit, lower_limit, root_link=None, weight=None)
         kitchen_setup.wrapper.cartesian_space_limit(tip_link=tip)
-        #kitchen_setup.send_and_check_goal()
 
         base_goal = PoseStamped()
         base_goal.header.frame_id = u'base_footprint'
-        base_goal.pose.position.x = 0.941
-        base_goal.pose.position.y = -0.5
-        base_goal.pose.position.z = 1.08
+        base_goal.pose.position.x = 0.95
+        base_goal.pose.position.y = 0.15
+        base_goal.pose.position.z = 1.2
         base_goal.pose.orientation = Quaternion(*quaternion_about_axis(1, [0, 0, 1]))
-        kitchen_setup.add_json_goal(u'CartesianVelocityLimit',
-                                    root_link=kitchen_setup.default_root,
-                                    tip_link=tip,
-                                    max_linear_velocity=0.1,
-                                    max_angular_velocity=0.2
-                                    )
-        kitchen_setup.set_joint_goal(default_pose)
-        relative_pose = zero_pose.get_robot().get_fk_pose(kitchen_setup.default_root, zero_pose.r_tip).pose
-        print(relative_pose)
-        kitchen_setup.set_and_check_cart_goal(base_goal, kitchen_setup.r_tip, u'base_footprint',
+
+        r_goal = PoseStamped()
+        r_goal.header.frame_id = kitchen_setup.l_tip
+        r_goal.pose.position.x -= 0.3
+        r_goal.pose.position.z += 0.6
+        r_goal.pose.orientation.w = 1
+        r_goal = tf.transform_pose(kitchen_setup.default_root, r_goal)
+        print("root", kitchen_setup.default_root)
+        print(r_goal)
+        r_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, -1, 0],
+                                                                      [0, 1, 0, 0],
+                                                                      [1, 0, 0, 0],
+                                                                      [0, 0, 0, 1]]))
+
+        #kitchen_setup.set_joint_goal(default_pose)
+
+        kitchen_setup.set_and_check_cart_goal(r_goal, kitchen_setup.l_tip, u'base_footprint',
                                            weight=WEIGHT_BELOW_CA)
         #zero_pose.set_translation_goal(base_goal, zero_pose.r_tip)
         #zero_pose.send_and_check_goal()
