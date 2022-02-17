@@ -2399,20 +2399,21 @@ class CartesianSpaceLimit(Constraint):
  ### Refer to 1066 line
     def __init__(self, godmap,
                  tip_link,
-                 lower_limit=0,  ##[0.0, 0.0, 0.7],
-                 upper_limit=1.5,  ### [1e3, 1.0, 1.5],
-                 weight=WEIGHT_BELOW_CA,
+                 lower_limit,
+                 upper_limit,
                  root_link=None,
+                 weight=WEIGHT_BELOW_CA,
                  goal_constraint=True):
         super(CartesianSpaceLimit, self).__init__(godmap)
 
         if root_link is None:
             self.root = self.get_robot().get_root()
+        self.root = root_link
         self.tip = tip_link
         print("in constraints {0}".format(self.tip))
         self.goal_constraint = goal_constraint
-        self.lower_limit = w.Matrix([0.5, 0.17, 1.08])
-        self.upper_limit = w.Matrix([1.0, 0.3, 1.2])
+        self.lower_limit = w.Matrix(lower_limit)
+        self.upper_limit = w.Matrix(upper_limit)
         ##self.goal = goal_pose
         self.weight = weight
 
@@ -2429,7 +2430,7 @@ class CartesianSpaceLimit(Constraint):
         ll = (self.lower_limit - root_P_tip[0:3])
         ul = (self.upper_limit - root_P_tip[0:3])
 
-        self.add_constraint(u'x',
+        self.add_constraint(u'x_limit',
                             weight=weight,
                             expression=root_P_tip[0],
                             goal_constraint=self.goal_constraint,
@@ -2437,7 +2438,7 @@ class CartesianSpaceLimit(Constraint):
                             lower=ll[0],
                             upper=ul[0])
 
-        self.add_constraint(u'y',
+        self.add_constraint(u'y_limit',
                             weight=weight,
                             expression=root_P_tip[1],
                             goal_constraint=self.goal_constraint,
@@ -2445,7 +2446,7 @@ class CartesianSpaceLimit(Constraint):
                             lower=ll[1],
                             upper=ul[1]
                             )
-        self.add_constraint(u'z',
+        self.add_constraint(u'z_limit',
                             weight=weight,
                             expression=root_P_tip[2],
                             goal_constraint=self.goal_constraint,

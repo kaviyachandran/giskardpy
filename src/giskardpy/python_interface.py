@@ -364,7 +364,7 @@ class GiskardWrapper(object):
         kwargs[u'goal_point'] = goal_point
         self.set_json_goal(u'Pointing', **kwargs)
 
-    def cartesian_space_limit(self, tip_link, root_link=None, weight=None):
+    def cartesian_space_limit(self, tip_link, lower_limit, upper_limit, root_link=None, weight=None):
         """
         Limits the position of the tip link within the given upper and lower limits while moving to a
         goal pose
@@ -381,7 +381,10 @@ class GiskardWrapper(object):
         :param weight: default WEIGHT_BELOW_CA
         :type weight: float
         """
-        kwargs = {u'tip_link': tip_link}
+        kwargs = {u'tip_link': tip_link,
+                  u'lower_limit': lower_limit,
+                  u'upper_limit': upper_limit}
+
         if root_link is not None:
             kwargs[u'root_link'] = root_link
         if weight is not None:

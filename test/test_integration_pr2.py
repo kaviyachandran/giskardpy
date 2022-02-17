@@ -699,7 +699,6 @@ class TestConstraints(object):
         tip = kitchen_setup.l_tip
         print(relative_pose, tip)
         ##cartesian_space_limit(self, tip_link, goal_pose, upper_limit, lower_limit, root_link=None, weight=None)
-        kitchen_setup.wrapper.cartesian_space_limit(tip_link=tip)
 
         base_goal = PoseStamped()
         base_goal.header.frame_id = u'base_footprint'
@@ -722,7 +721,9 @@ class TestConstraints(object):
                                                                       [0, 0, 0, 1]]))
 
         #kitchen_setup.set_joint_goal(default_pose)
-
+        lower_limit=[0.5, 0.17, 1.08]
+        upper_limit=[1.0, 0.3, 1.2]
+        kitchen_setup.wrapper.cartesian_space_limit(tip_link=tip, root_link=u'base_footprint', lower_limit=lower_limit, upper_limit=upper_limit)
         kitchen_setup.set_and_check_cart_goal(r_goal, kitchen_setup.l_tip, u'base_footprint',
                                            weight=WEIGHT_BELOW_CA)
         #zero_pose.set_translation_goal(base_goal, zero_pose.r_tip)
