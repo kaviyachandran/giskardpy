@@ -2410,10 +2410,13 @@ class CartesianSpaceLimit(Constraint):
             self.root = self.get_robot().get_root()
         self.root = root_link
         self.tip = tip_link
-        print("in constraints {0}".format(self.tip))
         self.goal_constraint = goal_constraint
-        self.lower_limit = w.Matrix(lower_limit)
-        self.upper_limit = w.Matrix(upper_limit)
+        self.lower_limit = w.Matrix([lower_limit[u'vector'][u'x'],
+                                     lower_limit[u'vector'][u'y'],
+                                     lower_limit[u'vector'][u'z']])
+        self.upper_limit = w.Matrix([upper_limit[u'vector'][u'x'],
+                                     upper_limit[u'vector'][u'y'],
+                                     upper_limit[u'vector'][u'z']])
         ##self.goal = goal_pose
         self.weight = weight
 
@@ -2426,7 +2429,7 @@ class CartesianSpaceLimit(Constraint):
 
         weight = self.get_input_float(self.weight)
         #t = self.get_input_sampling_period()
-        ###
+
         ll = (self.lower_limit - root_P_tip[0:3])
         ul = (self.upper_limit - root_P_tip[0:3])
 

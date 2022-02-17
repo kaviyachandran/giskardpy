@@ -685,27 +685,14 @@ class TestConstraints(object):
         np.testing.assert_almost_equal(expected_x.point.z, 0, 2)
 
     def test_cartesian_space_limit(self, kitchen_setup, zero_pose):
-        ### Get the current pose of the end-effector
         base_goal = PoseStamped()
         base_goal.header.frame_id = u'base_footprint'
         base_goal.pose.position.y = -1
         base_goal.pose.orientation.w = 1
-        ### Moves the base to some location
-        #kitchen_setup.teleport_base(base_goal)
 
-
-        ### gives the pose w.r.t root
-        relative_pose = zero_pose.get_robot().get_fk_pose(kitchen_setup.default_root, zero_pose.l_tip).pose
+        relative_pose = zero_pose.get_robot().get_fk_pose(kitchen_setup.default_root, zero_pose.l_tip)
         tip = kitchen_setup.l_tip
-        print(relative_pose, tip)
-        ##cartesian_space_limit(self, tip_link, goal_pose, upper_limit, lower_limit, root_link=None, weight=None)
-
-        base_goal = PoseStamped()
-        base_goal.header.frame_id = u'base_footprint'
-        base_goal.pose.position.x = 0.95
-        base_goal.pose.position.y = 0.15
-        base_goal.pose.position.z = 1.2
-        base_goal.pose.orientation = Quaternion(*quaternion_about_axis(1, [0, 0, 1]))
+        print(relative_pose)
 
         r_goal = PoseStamped()
         r_goal.header.frame_id = kitchen_setup.l_tip
@@ -713,21 +700,28 @@ class TestConstraints(object):
         r_goal.pose.position.z += 0.6
         r_goal.pose.orientation.w = 1
         r_goal = tf.transform_pose(kitchen_setup.default_root, r_goal)
-        print("root", kitchen_setup.default_root)
-        print(r_goal)
         r_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, -1, 0],
                                                                       [0, 1, 0, 0],
                                                                       [1, 0, 0, 0],
                                                                       [0, 0, 0, 1]]))
 
-        #kitchen_setup.set_joint_goal(default_pose)
-        lower_limit=[0.5, 0.17, 1.08]
-        upper_limit=[1.0, 0.3, 1.2]
+        lower_limit = Vector3Stamped()
+        lower_limit.header.frame_id = kitchen_setup.default_root
+        lower_limit.vector.x = relative_pose.pose.position.x - 0.5
+        lower_limit.vector.y = relative_pose.pose.position.y - 0.5
+        lower_limit.vector.z = relative_pose.pose.position.z - 0.5
+
+        upper_limit = Vector3Stamped()
+        upper_limit.header.frame_id = kitchen_setup.default_root
+        upper_limit.vector.x = relative_pose.pose.position.x + 1.5
+        upper_limit.vector.y = relative_pose.pose.position.y + 1.5
+        upper_limit.vector.z = relative_pose.pose.position.z + 0.2
+
         kitchen_setup.wrapper.cartesian_space_limit(tip_link=tip, root_link=u'base_footprint', lower_limit=lower_limit, upper_limit=upper_limit)
         kitchen_setup.set_and_check_cart_goal(r_goal, kitchen_setup.l_tip, u'base_footprint',
                                            weight=WEIGHT_BELOW_CA)
-        #zero_pose.set_translation_goal(base_goal, zero_pose.r_tip)
-        #zero_pose.send_and_check_goal()
+        print(zero_pose.get_robot().get_fk_pose(kitchen_setup.default_root, zero_pose.l_tip))
+
 
     def test_align_planes1(self, zero_pose):
         """
