@@ -14,7 +14,7 @@ from giskard_msgs.srv import UpdateWorldResponse, UpdateWorldRequest
 from numpy import pi
 from sensor_msgs.msg import JointState
 from shape_msgs.msg import SolidPrimitive
-from tf.transformations import quaternion_from_matrix, quaternion_about_axis
+from tf.transformations import quaternion_from_matrix, quaternion_about_axis, quaternion_matrix
 
 import giskardpy.tfwrapper as tf
 from giskardpy import logging, identifier
@@ -1221,6 +1221,56 @@ class TestConstraints(object):
 
 
 class TestCartGoals(object):
+
+    def test_task_space_control(self, zero_pose):
+        ## 1. find the current pose of the tool_frame
+        current_pose_root_ltip = zero_pose.get_robot().get_fk_pose(zero_pose.default_root, zero_pose.l_tip)
+        goal = PoseStamped()
+        goal.header.frame_id = zero_pose.l_tip
+        goal.pose.position.x = current_pose_root_ltip.pose.position.x
+        goal.pose.orientation = Quaternion(*quaternion_about_axis(pi/2, [0, 1, 0]))
+
+        zero_pose.set_and_check_cart_goal(goal, zero_pose.default_root, zero_pose.l_tip)
+        ##pose_world_root = zero_pose.get_robot().get_fk_pose(u'map', zero_pose.default_root)
+        ##print(current_pose_root_ltip)
+        ## 2. Compute the key poses
+        # key_frames = []
+        # center_pose = current_pose_root_ltip
+        # center_pose.pose.position.x = current_pose_root_ltip.pose.position.x + 0.03
+        # temp_rot = quaternion_matrix([center_pose.pose.orientation.w, center_pose.pose.orientation.x, center_pose.pose.orientation.y, center_pose.pose.orientation.z])
+        # temp_rot[0][3] = center_pose.pose.position.x
+        # temp_rot[1][3] = center_pose.pose.position.y
+        # temp_rot[2][3] = center_pose.pose.position.z
+        #
+        # angles = np.random.randint(0, 3.14, 20)
+        # np.sort(angles)
+        # radius = 0.015
+        # tr = np.array([[0], [radius], [0]])
+        # temp = np.array([[0], [0], [0], [1]])
+        # temp = np.transpose(temp)
+        # key_frames.append(temp_rot)
+
+
+        # for i in angles:
+        #     rotation = np.array([[np.cos(i), -np.sin(i), 0], [np.sin(i), np.cos(i), 0], [0, 0, 1]])
+        #     transformation = np.hstack((rotation, tr))
+        #     transformation = np.vstack((transformation, temp))
+        #     key_frames.append(np.multiply(temp_rot, transformation))
+        #
+        #
+        # ###print(key_frames)
+        # ## 3. Compute the joint angles to these poses
+        # for ind,t in enumerate(key_frames):
+        #     print(ind)
+        #     rot1 = np.row_stack((np.column_stack((t[0:3, :3], [0,0,0])), [0,0,0,1]))
+        #     orientation = quaternion_from_matrix(rot1)
+        #     position = t[:, 3]
+        #
+        #     goal = PoseStamped()
+        #     goal.header.frame_id = zero_pose.default_root
+        #     goal.pose.position = Point(position[0], position[1], position[2])
+        #     goal.pose.orientation = Quaternion(orientation[0], orientation[1], orientation[2], orientation[3])
+        #     zero_pose.set_and_check_cart_goal(goal, zero_pose.l_tip)
 
     def test_rotate_gripper(self, zero_pose):
         """
