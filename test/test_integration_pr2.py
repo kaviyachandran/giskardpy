@@ -25,7 +25,6 @@ from giskardpy.utils.math import compare_points, compare_orientations
 from utils_for_tests import compare_poses, publish_marker_vector, \
     JointGoalChecker, GiskardTestWrapper
 
-
 # scopes = ['module', 'class', 'function']
 pocky_pose = {'r_elbow_flex_joint': -1.29610152504,
               'r_forearm_roll_joint': -0.0301682323805,
@@ -1058,7 +1057,6 @@ class TestConstraints:
         kitchen_setup.plan_and_execute()  # send goal to Giskard
         # Update kitchen object
         kitchen_setup.set_kitchen_js({'sink_area_left_middle_drawer_main_joint': 0.0})
-
 
     def test_open_close_dishwasher(self, kitchen_setup: PR2TestWrapper):
         p = PoseStamped()
@@ -3486,6 +3484,92 @@ class TestCollisionAvoidanceGoals:
 
         kitchen_setup.set_joint_goal(kitchen_setup.better_pose)
         kitchen_setup.plan_and_execute()
+
+    def test_pick_block(self, kitchen_setup: PR2TestWrapper):
+
+        # 1. Move the base
+        # # Grasping
+        # 2. Go to a pre pose to align the planes with the box
+        # 3. Align the gripper to grasp ?
+        # 4. Close gripper
+        # # lifting
+        # 5. Move to a pre box pose to lift
+
+        name = 'box'
+        # 1. Move the base
+        base_goal = PoseStamped()
+        base_goal.header.frame_id = 'map'
+        base_goal.pose.position.x = -2.8
+        base_goal.pose.position.y = 0.31
+        base_goal.pose.orientation.z = -1
+        base_goal.pose.orientation.w = 0
+        kitchen_setup.teleport_base(base_goal)
+
+        # spawn box
+        box_pose = PoseStamped()
+        box_pose.header.frame_id = 'iai_kitchen/dining_area_jokkmokk_table_main'
+        box_pose.pose.position = Point(0.00, 0, .425)
+        box_pose.pose.orientation = Quaternion(0, 0, 0, 1)
+
+        kitchen_setup.add_box(name=name,
+                              size=(0.1, 0.1, 0.1),
+                              pose=box_pose)
+
+        box_pre = PoseStamped()
+        box_pre.header.frame_id = 'iai_kitchen/dining_area_jokkmokk_table_main'
+        box_pre.pose.position = Point(0, 0, 0.22)
+        box_pre.pose.orientation = Quaternion(0, 0, 0, 1)
+
+
+        # grasp box
+        # 2. Go to a pre pose to align the planes with the box
+        x = Vector3Stamped()
+        x.header.frame_id = kitchen_setup.l_tip
+        x.vector.x = 1
+        x_map = Vector3Stamped()
+        x_map.header.frame_id = 'box/box'
+        x_map.vector.y = 1
+        kitchen_setup.set_align_planes_goal(tip_link=kitchen_setup.l_tip,
+                                            tip_normal=x,
+                                            goal_normal=x_map)
+
+        kitchen_setup.plan_and_execute()
+
+        # 3. Align the gripper to grasp ?
+
+        box_grasp = PoseStamped()
+        box_grasp.header.frame_id = 'iai_kitchen/dining_area_jokkmokk_table_main'
+        box_grasp.pose.position = Point(0, -0.05, 0.425)
+        box_grasp.pose.orientation = Quaternion(0, 0, 0, 1)
+
+        kitchen_setup.set_cart_goal(box_grasp, name, kitchen_setup.default_root)
+        kitchen_setup.plan_and_execute()
+
+        kitchen_setup.update_parent_link_of_group(name, kitchen_setup.l_tip)
+        kitchen_setup.close_l_gripper()
+
+        # 5. Move to a pre box pose to lift
+        kitchen_setup.set_cart_goal(box_pre, name, kitchen_setup.default_root)
+        kitchen_setup.plan_and_execute()
+        # base_goal = PoseStamped()
+        # base_goal.header.frame_id = 'base_footprint'
+        # base_goal.pose.orientation.w = 1
+        # kitchen_setup.set_joint_goal(kitchen_setup.better_pose)
+        # kitchen_setup.move_base(base_goal)
+        #
+        # # place milk back
+        # kitchen_setup.set_cart_goal(box_pre, name, kitchen_setup.default_root)
+        # kitchen_setup.plan_and_execute()
+        #
+        # kitchen_setup.set_cart_goal(box_pose, name, kitchen_setup.default_root)
+        # kitchen_setup.plan_and_execute()
+        #
+        # kitchen_setup.open_l_gripper()
+        #
+        # kitchen_setup.detach_group(name)
+        #
+        # kitchen_setup.set_joint_goal(kitchen_setup.better_pose)
+        # kitchen_setup.plan_and_execute()
 
     def test_bowl_and_cup(self, kitchen_setup: PR2TestWrapper):
         # kernprof -lv py.test -s test/test_integration_pr2.py::TestCollisionAvoidanceGoals::test_bowl_and_cup
