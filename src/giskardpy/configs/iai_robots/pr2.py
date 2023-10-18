@@ -69,12 +69,12 @@ class PR2JointTrajServerMujocoInterface(RobotInterfaceConfig):
         self.add_follow_joint_trajectory_server(
             namespace='/pr2/whole_body_controller/follow_joint_trajectory',
             state_topic='/pr2/whole_body_controller/state')
-        self.add_follow_joint_trajectory_server(
-            namespace='/pr2/l_gripper_l_finger_controller/follow_joint_trajectory',
-            state_topic='/pr2/l_gripper_l_finger_controller/state')
-        self.add_follow_joint_trajectory_server(
-            namespace='/pr2/r_gripper_l_finger_controller/follow_joint_trajectory',
-            state_topic='/pr2/r_gripper_l_finger_controller/state')
+        # self.add_follow_joint_trajectory_server(
+        #     namespace='/pr2/l_gripper_l_finger_controller/follow_joint_trajectory',
+        #     state_topic='/pr2/l_gripper_l_finger_controller/state')
+        # self.add_follow_joint_trajectory_server(
+        #     namespace='/pr2/r_gripper_l_finger_controller/follow_joint_trajectory',
+        #     state_topic='/pr2/r_gripper_l_finger_controller/state')
         self.add_base_cmd_velocity(cmd_vel_topic='/pr2/cmd_vel',
                                    track_only_velocity=True,
                                    joint_name=self.drive_joint_name)
