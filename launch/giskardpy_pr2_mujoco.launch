@@ -5,10 +5,10 @@
   <node pkg="giskardpy" type="interactive_marker.py" name="giskard_interactive_marker" output="screen">
     <rosparam param="enable_self_collision">False</rosparam>
     <rosparam param="interactive_marker_chains">
-      - [map, r_gripper_tool_frame]
-      - [map, l_gripper_tool_frame]
-      - [map, base_footprint]
-      - [map, head_mount_kinect2_rgb_optical_frame]
+      - [odom, r_gripper_tool_frame]
+      - [base_footprint, l_gripper_tool_frame]
+      - [odom, base_footprint]
+      - [odom, head_mount_kinect2_rgb_optical_frame]
     </rosparam>
   </node>
 
