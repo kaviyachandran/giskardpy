@@ -5,7 +5,7 @@ from giskardpy.my_types import Derivatives
 
 class WorldWithPR2Config(WorldWithOmniDriveRobot):
     def __init__(self, map_name: str = 'map', localization_joint_name: str = 'localization',
-                 odom_link_name: str = 'odom_combined', drive_joint_name: str = 'brumbrum'):
+                 odom_link_name: str = 'odom', drive_joint_name: str = 'brumbrum'):
         super().__init__(map_name, localization_joint_name, odom_link_name, drive_joint_name)
 
     def setup(self):
@@ -64,11 +64,11 @@ class PR2JointTrajServerMujocoInterface(RobotInterfaceConfig):
         self.sync_6dof_joint_with_tf_frame(joint_name=self.localization_joint_name,
                                            tf_parent_frame=self.map_name,
                                            tf_child_frame=self.odom_link_name)
-        self.sync_joint_state_topic('/joint_states')
+        self.sync_joint_state_topic('/mujoco/robot_joint_states')
         self.sync_odometry_topic('/pr2/base_footprint', self.drive_joint_name)
         self.add_follow_joint_trajectory_server(
-            namespace='/pr2/whole_body_controller/follow_joint_trajectory',
-            state_topic='/pr2/whole_body_controller/state')
+            namespace='/whole_body_controller/follow_joint_trajectory',
+            state_topic='/whole_body_controller/state')
         # self.add_follow_joint_trajectory_server(
         #     namespace='/pr2/l_gripper_l_finger_controller/follow_joint_trajectory',
         #     state_topic='/pr2/l_gripper_l_finger_controller/state')
