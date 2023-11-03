@@ -1933,10 +1933,15 @@ def distance_point_to_line_segment(frame_P_current, frame_P_line_start, frame_P_
     line_len = norm(line_vec)
     line_unitvec = line_vec / line_len
     pnt_vec_scaled = pnt_vec / line_len
+    #  Projection of pnt_vec onto line_vec
     t = line_unitvec.dot(pnt_vec_scaled)
+    # Clamping the value of t between 0 and 1, enables finding the nearest point **on the line segment**
     t = limit(t, lower_limit=0.0, upper_limit=1.0)
+    # this vector points in the same direction as line_vec
     nearest = line_vec * t
     dist = norm(nearest - pnt_vec)
+    # Nearest vector has a magnitude equivalent to the projection and a direction of line_vec. The nearest point that
+    # lies on the line_vec is away from the line segments starting point by the magnitude of nearest vector.
     nearest = nearest + frame_P_line_start
     return dist, Point3(nearest)
 
