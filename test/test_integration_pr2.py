@@ -1102,7 +1102,7 @@ class TestConstraints:
         p = PoseStamped()
         p.header.frame_id = 'map'
         p.pose.orientation.w = 1
-        p.pose.position.x = 0.5
+        p.pose.position.x = 0.9
         p.pose.position.y = 0.2
         kitchen_setup.teleport_base(p)
 
@@ -1159,13 +1159,42 @@ class TestConstraints:
         kitchen_setup.plan_and_execute()
         kitchen_setup.set_kitchen_js({'sink_area_dish_washer_door_joint': goal_angle})
 
-        kitchen_setup.set_json_goal('Open',
-                                    tip_link=hand,
-                                    environment_link=handle_name,
-                                    goal_joint_state=0)
+        # # close the gripper
+        kitchen_setup.set_kitchen_js({'r_gripper_l_finger_joint': 0.0})
+
+        test_pose = PoseStamped()
+        test_pose.pose.position.x = 1.0
+        test_pose.pose.position.y = -0.04
+        test_pose.pose.position.z = 0.675
+        test_pose.pose.orientation = Quaternion(0, 0.7071068, 0, 0.7071068)
+
+        kitchen_setup.set_cart_goal(test_pose, tip_link=hand, root_link='map')
         kitchen_setup.allow_all_collisions()
+        # kitchen_setup.allow_collision(group1=kitchen_setup.kitchen_name, group2=kitchen_setup.r_gripper_group)
         kitchen_setup.plan_and_execute()
-        kitchen_setup.set_kitchen_js({'sink_area_dish_washer_door_joint': 0})
+        #
+        # # align the gripper on the side opposite to the handle
+        # door_frame_id = 'sink_area_dish_washer_door'
+        #
+        # x_gripper = Vector3Stamped()
+        # x_gripper.header.frame_id = hand
+        # x_gripper.vector.x = 1
+        #
+        # x_goal = Vector3Stamped()
+        # x_goal.header.frame_id = door_frame_id
+        # x_goal.vector.x = 1
+        # kitchen_setup.set_align_planes_goal(tip_link=hand,
+        #                                     tip_normal=x_gripper,
+        #                                     goal_normal=x_goal)
+        # kitchen_setup.plan_and_execute()
+
+        # kitchen_setup.set_json_goal('Open',
+        #                             tip_link=hand,
+        #                             environment_link=handle_name,
+        #                             goal_joint_state=0)
+        # kitchen_setup.allow_all_collisions()
+        # kitchen_setup.plan_and_execute()
+        # kitchen_setup.set_kitchen_js({'sink_area_dish_washer_door_joint': 0})
 
     def test_align_planes1(self, zero_pose: PR2TestWrapper):
         x_gripper = Vector3Stamped()
