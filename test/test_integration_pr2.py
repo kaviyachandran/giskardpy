@@ -12,7 +12,7 @@ import rospy
 from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, PointStamped, QuaternionStamped, Pose
 from numpy import pi
 from shape_msgs.msg import SolidPrimitive
-from tf.transformations import quaternion_from_matrix, quaternion_about_axis
+from tf.transformations import quaternion_from_matrix, quaternion_about_axis, rotation_matrix, quaternion_matrix
 
 import giskardpy.utils.tfwrapper as tf
 from giskard_msgs.msg import MoveResult, WorldBody, MoveGoal
@@ -1102,7 +1102,7 @@ class TestConstraints:
         p = PoseStamped()
         p.header.frame_id = 'map'
         p.pose.orientation.w = 1
-        p.pose.position.x = 0.9
+        p.pose.position.x = 0.8
         p.pose.position.y = 0.2
         kitchen_setup.teleport_base(p)
 
@@ -1159,19 +1159,99 @@ class TestConstraints:
         kitchen_setup.plan_and_execute()
         kitchen_setup.set_kitchen_js({'sink_area_dish_washer_door_joint': goal_angle})
 
+        handle = kitchen_setup.world.compute_fk_pose('map', 'sink_area_dish_washer_door_handle')
+
+        # Move to the opposite side of the handle
+        behind_handle = PoseStamped()
+        behind_handle.header.frame_id = 'map'
+        behind_handle.pose.position.x = 1.285 - 0.445 / 2  # 1.285 - 0.445/2  # 1.285 - 0.84 = 0.4445
+        behind_handle.pose.position.y = 0.05
+        behind_handle.pose.position.z = 0.76
+        # Align along the axis of rotation of the object.
+        behind_handle.pose.orientation = Quaternion(0, 0.7071, 0, 0.7071)  # rotate along y axis as the door opens
+        # along the y axis
+
+        kitchen_setup.set_cart_goal(behind_handle, tip_link=hand, root_link='map')
+
+        kitchen_setup.plan_and_execute()
+
         # # close the gripper
         kitchen_setup.set_kitchen_js({'r_gripper_l_finger_joint': 0.0})
 
-        test_pose = PoseStamped()
-        test_pose.pose.position.x = 1.0
-        test_pose.pose.position.y = -0.04
-        test_pose.pose.position.z = 0.675
-        test_pose.pose.orientation = Quaternion(0, 0.7071068, 0, 0.7071068)
+        # dishwasher dimensions - 0.0200, 0.5950, 1.365
+        # C-------D
+        # |       |
+        # A-------B
 
-        kitchen_setup.set_cart_goal(test_pose, tip_link=hand, root_link='map')
-        kitchen_setup.allow_all_collisions()
-        # kitchen_setup.allow_collision(group1=kitchen_setup.kitchen_name, group2=kitchen_setup.r_gripper_group)
+        A = np.array([[1.285, 0.42328, 0.3703]])
+        B = np.array([[1.285, 0.0167, 0.3703]])
+        C = np.array([[1.285, 0.4238, 0.6]])
+        D = np.array([[1.285, 0.0167, 0.6]])
+
+        # l = A[0, 1] - B[0, 1]
+        # h = C[0, 2] - A[0, 2]
+
+        ab = B - A
+        ac = C - A
+        n = np.cross(ab, ac)
+        n_unit = n / np.linalg.norm(n)
+
+        hand_pose = kitchen_setup.world.compute_fk_pose('map', hand)
+        hand_array = np.array([[hand_pose.pose.position.x, hand_pose.pose.position.y, hand_pose.pose.position.z]])
+        # Projection
+        p = hand_array - np.dot(hand_array - A, n_unit.T) * n_unit
+        print("before clipping ", p)
+        p[0, 1] = np.clip(p[0, 1], B[0, 1], A[0, 1])
+        p[0, 2] = np.clip(p[0, 2], A[0, 2], C[0, 2])
+
+        point_m_p = np.hstack((p, np.ones((1, 1))))
+        print("computed point", point_m_p)
+
+        # compute point_door_p
+        door_pose = kitchen_setup.world.compute_fk_pose('map', 'sink_area_dish_washer_door')
+        tf_m_d = quaternion_matrix(np.array([door_pose.pose.orientation.x, door_pose.pose.orientation.y,
+                                             door_pose.pose.orientation.z, door_pose.pose.orientation.w]))
+        tf_m_d[:, 3] = np.hstack((np.array([[door_pose.pose.position.x, door_pose.pose.position.y,
+                                             door_pose.pose.position.z]]), np.ones((1, 1))))
+
+        tf_d_m = np.linalg.inv(tf_m_d)
+        point_door_p = np.matmul(tf_d_m, point_m_p.T)
+        print("point d_p: ", point_door_p)
+
+        # 2. rotate the point
+        rot_door = rotation_matrix(goal_angle, np.array([0, 0, 1]))  # z is the axis of rotation in the local frame
+        point_rotated_door_p = np.matmul(rot_door, point_door_p)
+        print("rotated point", point_rotated_door_p)
+
+        # 3. compute point_rotated_m_p
+        print("shapes: ", tf_m_d.shape, point_rotated_door_p.shape)
+        point_rotated_m_p = np.matmul(tf_m_d, point_rotated_door_p)
+        print("point_rotated_m_p", point_rotated_m_p[0], point_rotated_m_p[1], point_rotated_m_p[2])
+        # 4. compute the goal pose
+
+        desired_pose = PoseStamped()
+        desired_pose.header.frame_id = 'map'
+        desired_pose.pose.position.x = point_rotated_m_p[0, 0]  # 1.285*np.cos(np.pi/4)
+        desired_pose.pose.position.y = point_rotated_m_p[1, 0]
+        desired_pose.pose.position.z = point_rotated_m_p[2, 0]  # 0.6*np.sin(np.pi/4)
+        hand_pose_orientation = hand_pose.pose.orientation
+        desired_pose.pose.orientation = Quaternion(hand_pose_orientation.x, hand_pose_orientation.y,
+                                                   hand_pose_orientation.z, hand_pose_orientation.w)
+
+        kitchen_setup.set_cart_goal(desired_pose, tip_link=hand, root_link='map')
+        kitchen_setup.allow_collision(group1=kitchen_setup.kitchen_name, group2=kitchen_setup.r_gripper_group)
         kitchen_setup.plan_and_execute()
+
+        # test_pose = PoseStamped()
+        # test_pose.pose.position.x = 1.0
+        # test_pose.pose.position.y = -0.04
+        # test_pose.pose.position.z = 0.675
+        # test_pose.pose.orientation = Quaternion(0, 0.7071068, 0, 0.7071068)
+        #
+        # kitchen_setup.set_cart_goal(test_pose, tip_link=hand, root_link='map')
+        # kitchen_setup.allow_all_collisions()
+        # # kitchen_setup.allow_collision(group1=kitchen_setup.kitchen_name, group2=kitchen_setup.r_gripper_group)
+        # kitchen_setup.plan_and_execute()
         #
         # # align the gripper on the side opposite to the handle
         # door_frame_id = 'sink_area_dish_washer_door'
@@ -2466,7 +2546,7 @@ class TestWorldManipulation:
     def test_single_joint_urdf(self, zero_pose: PR2TestWrapper):
         object_name = 'spoon'
         path = resolve_ros_iris('package://giskardpy/test/spoon/urdf/spoon.urdf')
-        with open(path, 'r')as f:
+        with open(path, 'r') as f:
             urdf_str = hacky_urdf_parser_fix(f.read())
         pose = PoseStamped()
         pose.header.frame_id = 'map'
