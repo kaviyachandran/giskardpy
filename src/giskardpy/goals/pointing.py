@@ -49,6 +49,7 @@ class Pointing(Goal):
 
     def make_constraints(self):
         root_T_tip = self.get_fk(self.root, self.tip)
+        # jac = w.jacobian(root_T_tip, )
         root_P_goal_point: w.Point3 = self.get_parameter_as_symbolic_expression('root_P_goal_point')
         tip_V_pointing_axis = w.Vector3(self.tip_V_pointing_axis)
 
