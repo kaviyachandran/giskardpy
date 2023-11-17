@@ -81,6 +81,7 @@ class GraspBar(Goal):
         root_P_line_end = root_P_bar_center - root_V_bar_axis * self.bar_length / 2
 
         dist, nearest = w.distance_point_to_line_segment(root_P_tip, root_P_line_start, root_P_line_end)
+        print(f'dist: {dist}, nearest: {nearest}')
 
         self.add_point_goal_constraints(frame_P_current=root_T_tip.to_position(),
                                         frame_P_goal=nearest,

@@ -1945,6 +1945,17 @@ def distance_point_to_line_segment(frame_P_current, frame_P_line_start, frame_P_
     nearest = nearest + frame_P_line_start
     return dist, Point3(nearest)
 
+def distance_point_to_rectangular_surface(frame_P_current, frame_P_bottom_left, frame_P_bottom_right, frame_P_top_left):
+    frame_P_current = Point3(frame_P_current)
+    frame_P_bottom_left = Point3(frame_P_bottom_left)
+    frame_P_bottom_right = Point3(frame_P_bottom_right)
+    frame_P_top_left = Point3(frame_P_top_left)
+
+    ab_vec = frame_P_bottom_right - frame_P_bottom_left
+    ac_vec = frame_P_top_left - frame_P_bottom_left
+    normal_vec = ca.cross(ab_vec, ac_vec)
+    normal_unit_vec = normal_vec / norm(normal_vec)
+
 
 def angle_between_vector(v1, v2):
     v1 = v1[:3]

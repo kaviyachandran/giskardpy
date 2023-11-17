@@ -1179,10 +1179,11 @@ class TestConstraints:
         kitchen_setup.set_kitchen_js({'r_gripper_l_finger_joint': 0.0})
 
         # dishwasher dimensions - 0.0200, 0.5950, 1.365
+        # from rviz length = 0.42, height = 0.565
         # C-------D
         # |       |
         # A-------B
-
+        # lOW HEIGHT - 0.263 , Max LENGTH - 0.38  Min LENGTH - 0.0222, max height - 0.65
         A = np.array([[1.285, 0.42328, 0.3703]])
         B = np.array([[1.285, 0.0167, 0.3703]])
         C = np.array([[1.285, 0.4238, 0.6]])
