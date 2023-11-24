@@ -1945,16 +1945,45 @@ def distance_point_to_line_segment(frame_P_current, frame_P_line_start, frame_P_
     nearest = nearest + frame_P_line_start
     return dist, Point3(nearest)
 
+
 def distance_point_to_rectangular_surface(frame_P_current, frame_P_bottom_left, frame_P_bottom_right, frame_P_top_left):
     frame_P_current = Point3(frame_P_current)
     frame_P_bottom_left = Point3(frame_P_bottom_left)
     frame_P_bottom_right = Point3(frame_P_bottom_right)
     frame_P_top_left = Point3(frame_P_top_left)
 
-    ab_vec = frame_P_bottom_right - frame_P_bottom_left
-    ac_vec = frame_P_top_left - frame_P_bottom_left
-    normal_vec = ca.cross(ab_vec, ac_vec)
-    normal_unit_vec = normal_vec / norm(normal_vec)
+    ab_vec = frame_P_bottom_right - frame_P_bottom_left  # along y axis
+    ac_vec = frame_P_top_left - frame_P_bottom_left  # along z axis
+    ap_vec = frame_P_current - frame_P_bottom_left
+
+    ab_len = norm(ab_vec)
+    ac_len = norm(ac_vec)
+    ab_unit = ab_vec / ab_len
+    ac_unit = ac_vec / ac_len
+
+    proj_pt = [dot(ab_unit, ap_vec/ab_len), dot(ac_unit, ap_vec/ac_len)]
+    proj_pt = limit(proj_pt, lower_limit=0.0, upper_limit=1.0)
+    nearest = frame_P_bottom_left + proj_pt[0]*ab_vec + proj_pt[1]*ac_vec
+
+
+    # n_vec = cross(ab_vec, ac_vec)
+    # n_unit = n_vec / np.linalg.norm
+    # proj_pt = ap_vec - dot(ap_vec, n_unit)*n_unit
+    #
+    #
+    # transformed_point = ca.mtimes(ca.horzcat(ab_unit, ac_unit).T, ap_vec)
+    #
+    # y_pnt = transformed_point[0]/ab_len
+    # z_pnt = transformed_point[1]/ac_len
+    #
+    # y_pnt = limit(y_pnt, lower_limit=0.0, upper_limit=1.0)
+    # z_pnt = limit(z_pnt, lower_limit=0.0, upper_limit=1.0)
+
+    # nearest = frame_P_bottom_left + np.array([0, y_pnt*ab_vec[1], z_pnt*ac_vec[2]])
+    dist = norm(nearest-frame_P_current)
+
+    return dist, nearest
+
 
 
 def angle_between_vector(v1, v2):
