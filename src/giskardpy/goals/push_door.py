@@ -138,12 +138,12 @@ class PushDoor(Goal):
         root_T_door = self.get_fk(self.root, self.door_object)
         door_P_nearest = cas.dot(door_T_root, nearest)
 
-        half_angle = self.object_rotated_angle / 2
+        # half_angle = self.object_rotated_angle / 2
         q = Quaternion()
-        q.x = self.object_rotation_axis.vector.x * np.sin(half_angle),
-        q.y = self.object_rotation_axis.vector.y * np.sin(half_angle),
-        q.z = self.object_rotation_axis.vector.z * np.sin(half_angle),
-        q.w = np.cos(half_angle)
+        q.x = self.object_rotation_axis.vector.x * np.sin(self.object_rotated_angle),
+        q.y = self.object_rotation_axis.vector.y * np.sin(self.object_rotated_angle),
+        q.z = self.object_rotation_axis.vector.z * np.sin(self.object_rotated_angle),
+        q.w = np.cos(self.object_rotated_angle)
         # q = cas.from_axis_angle(self.object_rotation_axis, self.goal_angle)
         rot_mat = cas.RotationMatrix(q)
         door_P_rotated_point = cas.dot(rot_mat, door_P_nearest)
