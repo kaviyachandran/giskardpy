@@ -23,12 +23,15 @@ class AlignTipToPushObject(Goal):
                  root_link: str,
                  tip_link: str,
                  door_object: str,
-                 door_height: float,
+                 # you will need the intermediate point in the direction the object opens. In dishwasher along z axis
+                 # in door along y axis?
+                 door_height: float,  #
+                 object_joint_name: str,
                  # door_length: float,
-                 door_pose: PoseStamped,
+                 # door_pose_before_rotation: PoseStamped,
                  tip_gripper_axis: Vector3Stamped,
                  object_rotation_axis: Vector3Stamped,
-                 object_rotation_angle: float,
+                 # object_rotation_angle: float,
                  root_group: Optional[str] = None,
                  tip_group: Optional[str] = None,
                  reference_linear_velocity: float = 0.1,
@@ -41,6 +44,8 @@ class AlignTipToPushObject(Goal):
         self.root = self.world.search_for_link_name(root_link, root_group)
         self.tip = self.world.search_for_link_name(tip_link, tip_group)
         self.door_object = self.world.search_for_link_name(door_object)
+        self.object_joint_angle = \
+            self.world.state.to_position_dict()[self.world.search_for_joint_name(object_joint_name)]
 
         tip_gripper_axis.header.frame_id = self.tip
         tip_gripper_axis.vector = tf.normalize(tip_gripper_axis.vector)
@@ -55,13 +60,13 @@ class AlignTipToPushObject(Goal):
         # Pose of the articulated object is at the center of the axis along which it rotates and not at the center of
         # the object.
         # self.root_T_door = self.world.compute_fk_pose(self.root, self.door_object)
-        self.root_T_door = door_pose
-        self.root_T_door.header.frame_id = self.root
-        self.root_P_door_object.point = self.root_T_door.pose.position
+        # self.root_T_door = door_pose_before_rotation
+        # self.root_T_door.header.frame_id = self.root
+        # self.root_P_door_object.point = self.root_T_door.pose.position
         self.door_height = door_height
         # self.door_length = door_length
 
-        self.object_rotation_angle = object_rotation_angle
+        # self.object_rotation_angle = object_rotation_angle
         self.reference_linear_velocity = reference_linear_velocity
         self.reference_angular_velocity = reference_angular_velocity
         self.weight = weight
@@ -74,36 +79,34 @@ class AlignTipToPushObject(Goal):
         root_V_object_rotation_axis = cas.dot(root_T_object, object_V_object_rotation_axis)
         root_V_tip_grasp_axis = cas.dot(root_T_tip, tip_V_tip_grasp_axis)
 
-        root_P_intermediate_point: PointStamped = self.root_P_door_object
-        root_P_intermediate_point.point.z = root_P_intermediate_point.point.z + self.door_height
+        root_P_object = self.world.compute_fk_pose(self.root, self.door_object)
 
-        # root_tf_door = quaternion_matrix(np.array([self.root_T_door.pose.orientation.x,
-        #                                           self.root_T_door.pose.orientation.y,
-        #                                           self.root_T_door.pose.orientation.z,
-        #                                           self.root_T_door.pose.orientation.w]))
-        # root_tf_door[:, 3] = np.array([self.root_T_door.pose.position.x, self.root_T_door.pose.position.y,
-        #                               self.root_T_door.pose.position.z, 1])
+        root_P_intermediate_point = PointStamped()
+        root_P_intermediate_point.header.frame_id = self.root
+        root_P_intermediate_point.point.x = root_P_object.pose.position.x
+        root_P_intermediate_point.point.y = root_P_object.pose.position.y
+        root_P_intermediate_point.point.z = root_P_object.pose.position.z + self.door_height
+
+        door_T_root = self.world.compute_fk_pose(self.door_object, self.root)
 
         # point w.r.t door
-        door_P_intermediate_point = tf.transform_point(self.door_object, root_P_intermediate_point)
-        desired_angle = self.object_rotation_angle * 0.5  # just chose 1/2 of the goal angle
-        # find rotated point in local frame
-        rot_matrix = rotation_matrix(desired_angle, np.array([self.object_rotation_axis.vector.x,
-                                                              self.object_rotation_axis.vector.y,
-                                                              self.object_rotation_axis.vector.z]))
+        door_P_intermediate_point = cas.dot(cas.TransMatrix(door_T_root), cas.Point3(root_P_intermediate_point))
+        desired_angle = self.object_joint_angle * 0.5  # just chose 1/2 of the goal angle
 
-        door_P_rotated_point = np.dot(rot_matrix,
-                                      np.array([door_P_intermediate_point.point.x,
-                                                door_P_intermediate_point.point.y,
-                                                door_P_intermediate_point.point.z,
-                                                1]))
-        door_P_rotated_point_ros = PointStamped()
-        door_P_rotated_point_ros.header.frame_id = self.door_object
-        door_P_rotated_point_ros.point.x = door_P_rotated_point[0]
-        door_P_rotated_point_ros.point.y = door_P_rotated_point[1]
-        door_P_rotated_point_ros.point.z = door_P_rotated_point[2]
-        root_P_rotated_point = tf.transform_point(self.root, door_P_rotated_point_ros)
-        # root_P_rotated_point = cas.dot(cas.TransMatrix(self.root_T_door), cas.Point3(door_P_rotated_point))
+        # find rotated point in local frame
+
+        q = Quaternion()
+        rot_vector = np.array([self.object_rotation_axis.vector.x, self.object_rotation_axis.vector.y,
+                               self.object_rotation_axis.vector.z])
+        q.x = rot_vector[0] * np.sin(desired_angle / 2),
+        q.y = rot_vector[1] * np.sin(desired_angle / 2),
+        q.z = rot_vector[2] * np.sin(desired_angle / 2),
+        q.w = np.cos(desired_angle / 2)
+        rot_mat = cas.RotationMatrix(q)
+
+        door_P_rotated_point = cas.dot(rot_mat, cas.Point3(door_P_intermediate_point))
+
+        root_P_rotated_point = cas.dot(cas.TransMatrix(root_T_object), cas.Point3(door_P_rotated_point))
 
         self.add_debug_expr('goal_point', cas.Point3(root_P_rotated_point))
         self.add_point_goal_constraints(frame_P_current=root_T_tip.to_position(),
@@ -121,4 +124,3 @@ class AlignTipToPushObject(Goal):
     def __str__(self):
         s = super().__str__()
         return f'{s}/{self.root}/{self.tip}'
-
