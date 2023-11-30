@@ -60,9 +60,9 @@ class PushDoor(Goal):
 
         self.axis = {0: "x", 1: "y", 2: "z"}
 
-        self.rotation_axis = np.argmax([root_V_object_rotation_axis.vector.x,
-                                        root_V_object_rotation_axis.vector.y,
-                                        root_V_object_rotation_axis.vector.z])
+        self.rotation_axis = np.argmax(np.abs([root_V_object_rotation_axis.vector.x,
+                                               root_V_object_rotation_axis.vector.y,
+                                               root_V_object_rotation_axis.vector.z]))
         self.normal_axis = np.argmax([root_V_object_normal.vector.x,
                                       root_V_object_normal.vector.y,
                                       root_V_object_normal.vector.z])
@@ -119,27 +119,19 @@ class PushDoor(Goal):
         root_P_tip.point.x = root_Pose_tip.pose.position.x
         root_P_tip.point.y = root_Pose_tip.pose.position.y
         root_P_tip.point.z = root_Pose_tip.pose.position.z
-        dist, root_P_nearest = cas.distance_point_to_rectangular_surface(root_P_tip,
-                                                                         root_P_bottom_left,
-                                                                         root_P_bottom_right,
-                                                                         root_P_top_left)
+        dist, root_P_nearest = cas.distance_point_to_rectangular_surface(cas.Point3(root_P_tip),
+                                                                         cas.Point3(root_P_bottom_left),
+                                                                         cas.Point3(root_P_bottom_right),
+                                                                         cas.Point3(root_P_top_left))
 
         door_T_root = self.world.compute_fk_pose(self.door_object, self.root)
-        # root_T_door = self.get_fk(self.root, self.door_object)
         door_P_nearest = cas.dot(cas.TransMatrix(door_T_root), root_P_nearest)
-        # Not sure how to transform the vector object_rotation_axis
-        # in the root_frame to local frame.
-        # Question: Does something like below is good?
-        # root_V_object_rotation_axis = cas.Vector3(self.object_rotation_axis)
-        # object_V_object_rotation_axis = cas.dot(door_T_root, root_V_object_rotation_axis)
-        local_rotation_axis = np.array([0, 0, 1])
-        q = Quaternion()
-        q.x = local_rotation_axis[0] * np.sin(self.object_joint_angle / 2),
-        q.y = local_rotation_axis[1] * np.sin(self.object_joint_angle / 2),
-        q.z = local_rotation_axis[2] * np.sin(self.object_joint_angle / 2),
-        q.w = np.cos(self.object_joint_angle / 2)
-        rot_mat = cas.RotationMatrix(q)
-        # rotating in the local frame
+
+        root_V_object_rotation_axis = cas.Vector3(self.object_rotation_axis)
+        object_V_object_rotation_axis = cas.dot(cas.TransMatrix(door_T_root), root_V_object_rotation_axis)
+
+        rot_mat = cas.RotationMatrix.from_axis_angle(cas.Vector3(object_V_object_rotation_axis),
+                                                     self.object_joint_angle)
         door_P_rotated_point = cas.dot(rot_mat, door_P_nearest)
 
         root_P_rotated_point = cas.dot(cas.TransMatrix(root_T_door), cas.Point3(door_P_rotated_point))
