@@ -1243,8 +1243,7 @@ class TestConstraints:
                                     object_joint_name=door_joint,
                                     # door_length=0.42,
                                     tip_gripper_axis=tip_grasp_axis,
-                                    object_rotation_axis=object_rotation_axis,
-                                    object_rotation_angle=goal_angle)
+                                    object_rotation_axis=object_rotation_axis)
 
         kitchen_setup.plan_and_execute()
         object_normal = Vector3Stamped()
@@ -1360,23 +1359,50 @@ class TestConstraints:
         desired_pose.pose.orientation = Quaternion(hand_pose_orientation.x, hand_pose_orientation.y,
                                                    hand_pose_orientation.z, hand_pose_orientation.w)
 
-        # kitchen_setup.set_json_goal('PushDoor',
-        #                             root_link=kitchen_setup.default_root,
-        #                             tip_link=hand,
-        #                             door_object=door_name,
-        #                             door_height=0.565,
-        #                             door_length=0.42,
-        #                             tip_gripper_axis=tip_grasp_axis,
-        #                             object_rotation_angle=goal_angle,
-        #                             object_rotation_axis=object_rotation_axis,
-        #                             object_normal=object_normal)
+        root_V_object_rotation_axis = Vector3Stamped()
+        root_V_object_rotation_axis.header.frame_id = "map"
+        root_V_object_rotation_axis.vector.y = -1
 
-        # kitchen_setup.allow_collision(group1="iai_kitchen/"+door_name, group2=kitchen_setup.r_gripper_group)
+        kitchen_setup.set_json_goal('PushDoor',
+                                    root_link=kitchen_setup.default_root,
+                                    tip_link=hand,
+                                    door_object=door_name,
+                                    door_height=0.565,
+                                    door_length=0.42,
+                                    tip_gripper_axis=tip_grasp_axis,
+                                    root_V_object_rotation_axis=root_V_object_rotation_axis,
+                                    object_joint_name=door_joint,
+                                    root_V_object_normal=object_normal)
+
+        kitchen_setup.allow_collision(group1=door_obj, group2=kitchen_setup.r_gripper_group)
+        kitchen_setup.plan_and_execute()
 
         # kitchen_setup.set_cart_goal(desired_pose, tip_link=hand, root_link='map')
         # kitchen_setup.allow_collision(group1=door_obj, group2=kitchen_setup.r_gripper_group)
-        # kitchen_setup.allow_all_collisions()
         # kitchen_setup.plan_and_execute()
+        hand_pose_now = kitchen_setup.world.compute_fk_pose('map', hand)
+        pose_to_push_down = PoseStamped()
+        pose_to_push_down.header.frame_id = hand_pose_now.header.frame_id
+        pose_to_push_down.pose.position.x = hand_pose_now.pose.position.x
+        pose_to_push_down.pose.position.y = hand_pose_now.pose.position.y
+        pose_to_push_down.pose.position.z = hand_pose.pose.position.z - 0.15
+        pose_to_push_down.pose.orientation = hand_pose.pose.orientation
+
+        # kitchen_setup.set_json_goal('CartesianPose',
+        #                             root_link='map',
+        #                             tip_link=hand,
+        #                             goal_pose=pose_to_push_down)
+
+        # Qn to Simon: There is a minor difference compared to the normal drawer scenario, here the robot tip does not have to move
+        # with the handle. The force applied by the gripper can just move the object further
+        # (if the force is sufficient)
+        kitchen_setup.set_json_goal(constraint_type='Open',
+                                    tip_link=hand,
+                                    environment_link=handle_name,
+                                    goal_joint_state=1.3217)
+
+        kitchen_setup.allow_collision(group1=door_obj, group2=kitchen_setup.r_gripper_group)
+        kitchen_setup.plan_and_execute()
 
         # test_pose = PoseStamped()
         # test_pose.pose.position.x = 1.0
