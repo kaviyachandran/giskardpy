@@ -164,7 +164,7 @@ class OpenDoor:
 		                                tip_grasp_axis=tip_grasp_axis,
 		                                bar_center=bar_center,
 		                                bar_axis=bar_axis,
-		                                bar_length=.4)
+		                                bar_length=.44)
 
 		x_gripper = Vector3Stamped()
 		x_gripper.header.frame_id = self.l_tip
@@ -199,7 +199,7 @@ class OpenDoor:
 		for (ind, val) in enumerate(data.name):
 			if val == self.l_gripper_joint:
 				print("pos ", data.position[ind])
-				if data.position[ind] <= 0.12:  # and val.velocity[ind] < 0.05:
+				if data.position[ind] <= 0.15:  # and val.velocity[ind] < 0.05:
 					self.is_grasp = True
 				break
 
@@ -229,10 +229,10 @@ class OpenDoor:
 
 
 def reset_object_state(data):
-	object_joint_name = "door_hinge_joint"
+	object_joint_name = "sink_area_dish_washer_door_joint"
 	joint_value = 0
-	for i in range(0, len(data.name)):
-		if data.name[i] == object_joint_name and data.position[i] != 0:
+	for ind, val in enumerate(data.name):
+		if val == object_joint_name and data.position[ind] != 0:
 			rospy.wait_for_service('/mujoco/reset_object_joint_state')
 			try:
 				reset_object_joint = rospy.ServiceProxy('/mujoco/reset_object_joint_state', ResetObject)
@@ -245,15 +245,15 @@ if __name__ == "__main__":
 	""" Note to self : launch giskard as you create an instance of the python wrapper."""
 	rospy.init_node("open_door")
 	open_door = OpenDoor()
-	""" Wait for message on the topic and if the message is received, shut down """
+	# """ Wait for message on the topic and if the message is received, shut down """
 	# obj_joint_states = rospy.wait_for_message('/mujoco/world_joint_states', JointState)
 	# print('joint states:{}'.format(obj_joint_states))
 	# if obj_joint_states:
-	#     reset_object_state(obj_joint_states)
-	open_door.init_world()
-	open_door.reset_base_pose()
-	open_door.reset_joints()
-	open_door.align_to_grasp()
+	# 	reset_object_state(obj_joint_states)
+	# open_door.init_world()
+	# open_door.reset_base_pose()
+	# open_door.reset_joints()
+	# open_door.align_to_grasp()
 	# if graspHandle.switch_controller():
 	open_door.pull_handle()
 
