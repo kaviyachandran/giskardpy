@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+# Todo : Check isgrasp differently
 import rospy
 
 from std_msgs.msg import Float64
@@ -9,6 +10,7 @@ from sensor_msgs.msg import JointState
 
 import numpy as np
 import giskardpy.utils.tfwrapper as tf
+# from giskardpy.model.world import WorldTree
 from giskardpy.python_interface import GiskardWrapper
 
 
@@ -39,7 +41,7 @@ class OpenDoor:
 			'l_upper_arm_roll_joint': 0,
 			'l_wrist_flex_joint': -0.10001,
 			'l_wrist_roll_joint': 0,
-			'torso_lift_joint': 0.2,
+			# 'torso_lift_joint': 0.2,
 			'head_pan_joint': 0,
 			'head_tilt_joint': 0,
 			'l_gripper_l_finger_joint': 0.55,
@@ -83,7 +85,7 @@ class OpenDoor:
 		                                         Float64,
 		                                         queue_size=50)
 
-		self.is_grasp = False
+		self.is_gripper_closed = False
 
 	def reset_joints(self):
 		self.giskard.set_joint_goal(self.better_pose)
@@ -164,7 +166,7 @@ class OpenDoor:
 		                                tip_grasp_axis=tip_grasp_axis,
 		                                bar_center=bar_center,
 		                                bar_axis=bar_axis,
-		                                bar_length=.44)
+		                                bar_length=.40)
 
 		x_gripper = Vector3Stamped()
 		x_gripper.header.frame_id = self.l_tip
@@ -200,45 +202,126 @@ class OpenDoor:
 			if val == self.l_gripper_joint:
 				print("pos ", data.position[ind])
 				if data.position[ind] <= 0.15:  # and val.velocity[ind] < 0.05:
-					self.is_grasp = True
+					self.is_gripper_closed = True
 				break
 
 	def pull_handle(self):
-		goal_angle = np.pi / 18
-		self.send_gripper_goal(state="close")
+		obj_goal_angle = np.pi/4
+
+		obj_joint_states = rospy.wait_for_message('/mujoco/world_joint_states', JointState)
+		current_door_joint_state = self.get_door_joint_state(obj_joint_states)
+		while current_door_joint_state <= obj_goal_angle:
+			goal_angle = (obj_goal_angle - current_door_joint_state)/2 + current_door_joint_state
+			# self.send_gripper_goal(state="close")
 
 		# sub = rospy.Subscriber("/mujoco/robot_joint_states", JointState, self._grasp_check_callback)
-		data = rospy.wait_for_message("/mujoco/robot_joint_states", JointState, timeout=5)
-		self._grasp_check_callback(data)
-		if self.is_grasp:
-			self.giskard.set_json_goal('Open',
-			                           tip_link=self.l_tip,
-			                           environment_link=self.handle_name,
-			                           goal_joint_state=goal_angle)
+			data = rospy.wait_for_message("/mujoco/robot_joint_states", JointState, timeout=5)
+			gripper_pose = tf.lookup_pose('map', self.l_tip) # TODO: Check if lookup_transform is faster
+			handle_pose = tf.lookup_pose('map', self.handle_name)
+			distance_between_gripper_handle = np.linalg.norm(np.array([gripper_pose.pose.position.x,
+                                                                       gripper_pose.pose.position.y]) -
+			                                                 np.array([handle_pose.pose.position.x,
+			                                                           handle_pose.pose.position.y]))
+			self._grasp_check_callback(data)
+			if self.is_gripper_closed and distance_between_gripper_handle <= 0.4/2:  # 0,43 - length of the handle
+				self.giskard.set_json_goal('Open',
+				                           tip_link=self.l_tip,
+				                           environment_link=self.handle_name,
+				                           goal_joint_state=goal_angle,
+				                           max_velocity=2)  # 2 rad/s and 1.46 m/s
 
-			# l_gripper_pose = tf.lookup_pose('map', self.l_tip)
-			# l_gripper_pose.pose.position.x = l_gripper_pose.pose.position.x + 0.01
-			# # l_gripper_pose.pose.position.y = l_gripper_pose.pose.position.y+0.1
-			# self.giskard.set_cart_goal(l_gripper_pose, tip_link=self.l_tip, root_link='map')
+				self.giskard.allow_collision(self.handle_collision_group, self.gripper_collision_group)
+				self.giskard.plan_and_execute()  # send goal to Giskard
+			else:
+				self.align_to_grasp()
+
+			obj_joint_states = rospy.wait_for_message('/mujoco/world_joint_states', JointState, timeout=2)
+			if obj_joint_states:
+				current_door_joint_state = self.get_door_joint_state(obj_joint_states)
+
+	def push_door(self):
+		# Get the goal state of the door
+		# if it is grater than 45 degrees then align to push and then push the door
+		self.send_gripper_goal(state="open")
+
+		obj_joint_states = rospy.wait_for_message('/mujoco/world_joint_states', JointState)
+		door_joint_value = 0
+		if obj_joint_states:
+			door_joint_value = self.get_door_joint_state(obj_joint_states)
+
+		if door_joint_value >= np.pi / 6: # ToDo: update this it should be close to the goal angle set
+			tip_grasp_axis = Vector3Stamped()
+			tip_grasp_axis.header.frame_id = self.l_tip
+			tip_grasp_axis.vector.y = 1
+
+			# Todo: One can get this from giskard as the urdf is added to giskards world?
+			object_rotation_axis = Vector3Stamped()
+			object_rotation_axis.header.frame_id = self.door_name
+			object_rotation_axis.vector.z = 1
+			self.giskard.set_json_goal('AlignTipToPushObject',
+			                           root_link=self.root,
+			                           tip_link=self.l_tip,
+			                           door_object=self.door_name,
+			                           door_height=0.73,
+			                           # door_pose_before_rotation=root_Pose_door,
+			                           object_joint_name=self.door_joint,
+			                           # door_length=0.42,
+			                           tip_gripper_axis=tip_grasp_axis,
+			                           object_rotation_axis=object_rotation_axis)
+
 			self.giskard.allow_collision(self.handle_collision_group, self.gripper_collision_group)
-			# self.giskard.allow_all_collisions()
 			self.giskard.plan_and_execute()  # send goal to Giskard
 
-		else:
-			self.align_to_grasp()
+			# ToDo: This can be computed. So if it rotates along z axis w.r.t dishwasher main then compute the value
+			# w.r.t map
+			root_V_object_rotation_axis = Vector3Stamped()
+			root_V_object_rotation_axis.header.frame_id = "map"
+			root_V_object_rotation_axis.vector.y = -1
 
+			object_normal = Vector3Stamped()
+			object_normal.header.frame_id = self.door_name
+			object_normal.vector.x = 1
 
-def reset_object_state(data):
-	object_joint_name = "sink_area_dish_washer_door_joint"
-	joint_value = 0
-	for ind, val in enumerate(data.name):
-		if val == object_joint_name and data.position[ind] != 0:
-			rospy.wait_for_service('/mujoco/reset_object_joint_state')
-			try:
-				reset_object_joint = rospy.ServiceProxy('/mujoco/reset_object_joint_state', ResetObject)
-				return reset_object_joint(object_joint_name, joint_value)
-			except rospy.ServiceException as e:
-				print("Service call failed: %s" % e)
+			self.giskard.set_json_goal('PushDoor',
+			                           root_link=self.root,
+			                           tip_link=self.l_tip,
+			                           door_object=self.door_name,
+			                           door_height=0.73,
+			                           door_length=0.54,
+			                           tip_gripper_axis=tip_grasp_axis,
+			                           root_V_object_rotation_axis=root_V_object_rotation_axis,
+			                           object_joint_name=self.door_joint,
+			                           root_V_object_normal=object_normal)
+
+			self.giskard.allow_collision(self.handle_collision_group, self.gripper_collision_group)
+			self.giskard.plan_and_execute()  # send goal to Giskard
+
+			self.giskard.set_json_goal(constraint_type='Open',
+			                           tip_link=self.l_tip,
+			                           environment_link=self.handle_name,
+			                           goal_joint_state=1.3217)
+
+			self.giskard.allow_collision(self.handle_collision_group, self.gripper_collision_group)
+			self.giskard.plan_and_execute()  # send goal to Giskard
+
+	def get_door_joint_state(self, data) -> float:
+		for ind, val in enumerate(data.name):
+			if val == self.door_joint:
+				return data.position[ind]
+
+	def reset_object_state(self):
+		obj_joint_states = rospy.wait_for_message('/mujoco/world_joint_states', JointState)
+		joint_value = 0
+		if obj_joint_states:
+			door_joint_value = self.get_door_joint_state(obj_joint_states)
+			if door_joint_value != 0:
+				rospy.wait_for_service('/mujoco/reset_object_joint_state')
+				try:
+					print("resetting object joints ....")
+					reset_object_joint = rospy.ServiceProxy('/mujoco/reset_object_joint_state', ResetObject)
+					return reset_object_joint(self.door_joint, joint_value)
+				except rospy.ServiceException as e:
+					print("Service call failed: %s" % e)
 
 
 if __name__ == "__main__":
@@ -246,15 +329,14 @@ if __name__ == "__main__":
 	rospy.init_node("open_door")
 	open_door = OpenDoor()
 	# """ Wait for message on the topic and if the message is received, shut down """
-	# obj_joint_states = rospy.wait_for_message('/mujoco/world_joint_states', JointState)
+
 	# print('joint states:{}'.format(obj_joint_states))
-	# if obj_joint_states:
-	# 	reset_object_state(obj_joint_states)
+	# open_door.reset_object_state()
 	# open_door.init_world()
 	# open_door.reset_base_pose()
-	# open_door.reset_joints()
-	# open_door.align_to_grasp()
-	# if graspHandle.switch_controller():
+	open_door.reset_joints()
+	open_door.align_to_grasp()
 	open_door.pull_handle()
+	open_door.push_door()
 
-	# rospy.spin()
+# rospy.spin()
