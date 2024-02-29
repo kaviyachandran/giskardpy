@@ -500,6 +500,30 @@ class TestActionGoals:
                                                root_link='map')
         zero_pose.execute(add_local_minimum_reached=False)
 
+    def test_pouring_action2(self, zero_pose):
+        goal_pose = PoseStamped()
+        goal_pose.header.frame_id = 'map'
+        goal_pose.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, 1, 0],
+                                                                         [0, -1, 0, 0],
+                                                                         [1, 0, 0, 0],
+                                                                         [0, 0, 0, 1]]))
+        goal_pose.pose.position.x = 1.95
+        goal_pose.pose.position.y = 0.2
+        goal_pose.pose.position.z = 0.7
+        tilt_axis = Vector3Stamped()
+        tilt_axis.header.frame_id = 'hand_palm_link'
+        tilt_axis.vector.z = 1
+        zero_pose.motion_goals.add_motion_goal(motion_goal_class='PouringAdaptiveTilt',
+                                               name='pouring',
+                                               tip='hand_palm_link',
+                                               root='map',
+                                               tilt_angle=1,
+                                               pouring_pose=goal_pose,
+                                               tilt_axis=tilt_axis,
+                                               pre_tilt=False, with_feedback=False)
+        zero_pose.allow_all_collisions()
+        zero_pose.execute(add_local_minimum_reached=False)
+
     def test_complete_pouring(self, zero_pose):
         # first start related scripts for BB detection and scene action reasoning
         zero_pose.motion_goals.add_motion_goal(motion_goal_class=CloseGripper.__name__,
