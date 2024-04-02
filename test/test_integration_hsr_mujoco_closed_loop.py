@@ -530,9 +530,9 @@ class TestActionGoals:
         zero_pose.allow_all_collisions()
         zero_pose.execute()
 
-        goal_pose.pose.position.x = 1.95
-        goal_pose.pose.position.y = -0.4
-        goal_pose.pose.position.z = 0.49
+        goal_pose.pose.position.x = 1.65
+        goal_pose.pose.position.y = -0.6
+        goal_pose.pose.position.z = 0.64
         # goal_pose.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, 1, 0],
         #                                                                  [0, -1, 0, 0],
         #                                                                  [1, 0, 0, 0],

@@ -165,7 +165,7 @@ class PouringAdaptiveTilt(Goal):
         is_rot_2 = symbol_manager.get_symbol(f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].z_rot_2')
         angle_z = -0.01 * is_rot_1 + 0.01 * is_rot_2
         tip_R_tip2 = cas.RotationMatrix().from_axis_angle(cas.Vector3([0, 0, 1]), angle_z)
-        root_R_tip_desired_a = root_R_tip.dot(tip_R_tip_a)  # .dot(tip_R_tip2)
+        root_R_tip_desired_a = root_R_tip.dot(tip_R_tip_a).dot(tip_R_tip2)
         # TODO: look into slerp again. Is that necessary here?
         # TODO: Try this with quaternions instead!
         adaptive_task.add_rotation_goal_constraints(frame_R_current=root_R_tip,
@@ -224,8 +224,8 @@ class PouringAdaptiveTilt(Goal):
         is_y_back = symbol_manager.get_symbol(f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].move_y_back')
         is_up = symbol_manager.get_symbol(f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].up')
         is_down = symbol_manager.get_symbol(f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].down')
-        root_V_adapt = cas.Vector3([0.02 * is_x - 0.02 * is_x_back,
-                                    0.02 * is_y - 0.02 * is_y_back,
+        root_V_adapt = cas.Vector3([0.005 * is_x - 0.005 * is_x_back,
+                                    0.005 * is_y - 0.005 * is_y_back,
                                     0.02 * is_up - 0.02 * is_down,
                                     ])
         adapt_pos_task.add_equality_constraint_vector(reference_velocities=[self.max_vel] * 3,

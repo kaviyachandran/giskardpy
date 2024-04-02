@@ -115,7 +115,7 @@ class WorldConfig(ABC):
         return group_name
 
     def add_robot_from_parameter_server(self,
-                                        parameter_name: str = 'robot_description',
+                                        parameter_name: str = 'pr2/robot_description',
                                         group_name: Optional[str] = None) -> str:
         """
         Add a robot urdf from parameter server to Giskard.
@@ -252,7 +252,7 @@ class WorldWithOmniDriveRobot(WorldConfig):
     def __init__(self,
                  map_name: str = 'map',
                  localization_joint_name: str = 'localization',
-                 odom_link_name: str = 'odom',
+                 odom_link_name: str = 'odom_combined',
                  drive_joint_name: str = 'brumbrum'):
         super().__init__()
         self.map_name = map_name

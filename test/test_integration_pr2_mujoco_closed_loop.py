@@ -784,7 +784,7 @@ class TestPouring:
         tilt_axis = Vector3Stamped()
         tilt_axis.header.frame_id = 'dummy'
         tilt_axis.vector.y = 2 / math.sqrt(5)
-        tilt_axis.vector.x = 1 / math.sqrt(5)
+        tilt_axis.vector.x = -1 / math.sqrt(5)
         zero_pose.motion_goals.add_motion_goal(motion_goal_class=PouringAdaptiveTilt.__name__,
                                                name='pouring',
                                                tip='dummy',
