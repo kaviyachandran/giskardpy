@@ -30,9 +30,11 @@ from giskardpy.goals.tracebot import InsertCylinder
 from giskardpy.god_map import god_map
 from giskardpy.model.better_pybullet_syncer import BetterPyBulletSyncer
 from giskardpy.model.collision_world_syncer import CollisionWorldSynchronizer
+from giskardpy.model.joints import OmniDrive
+from giskardpy.model.links import Link
 from giskardpy.model.utils import make_world_body_box, hacky_urdf_parser_fix
 from giskardpy.model.world import WorldTree
-from giskardpy.data_types import PrefixName
+from giskardpy.data_types import PrefixName, Derivatives
 from giskardpy.tasks.task import WEIGHT_BELOW_CA, WEIGHT_ABOVE_CA, WEIGHT_COLLISION_AVOIDANCE
 from giskardpy.python_interface.old_python_interface import OldGiskardWrapper
 from giskardpy.utils.utils import launch_launchfile, suppress_stderr, resolve_ros_iris
@@ -1659,6 +1661,34 @@ class TestConstraints:
 
         kitchen_setup.allow_collision(group1=door_obj, group2=right_forearm)
         kitchen_setup.plan_and_execute()
+
+    def test_add_joint(self, kitchen_setup: PR2TestWrapper):
+        with god_map.world.modify_world():
+            link1 = Link('link1')
+            god_map.world._add_link(link1)
+            j = OmniDrive(name=PrefixName('j1', None), parent_link_name=god_map.world.root_link_name,
+                          child_link_name=link1.name,
+                          translation_limits={
+                                      Derivatives.velocity: 0.2,
+                                      Derivatives.acceleration: 1,
+                                      Derivatives.jerk: 5,
+                                  },
+                          rotation_limits={
+                                      Derivatives.velocity: 0.2,
+                                      Derivatives.acceleration: 1,
+                                      Derivatives.jerk: 5
+                                  })
+            god_map.world._add_joint(j)
+        p = PoseStamped()
+        p.header.frame_id = 'map'
+        p.pose.position.x = 1
+        p.pose.orientation.w = 1
+        kitchen_setup.set_cart_goal(goal_pose=p, root_link='map', tip_link='link1')
+
+        p2 = god_map.world.compute_fk_pose('link1', 'r_gripper_tool_frame')
+        kitchen_setup.set_cart_goal(goal_pose=p2, root_link='link1', tip_link='r_gripper_tool_frame')
+        kitchen_setup.plan_and_execute()
+        pass
 
     def test_align_planes1(self, zero_pose: PR2TestWrapper):
         x_gripper = Vector3Stamped()
