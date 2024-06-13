@@ -10,3 +10,4 @@ if __name__ == '__main__':
     giskard = Giskard(world_config=BallBotWorldConfig(),
                       collision_avoidance_config=BallBotCollisionAvoidanceConfig(),
                       robot_interface_config=BallBotJointTrajServerMujocoInterface())
+    giskard.live()
