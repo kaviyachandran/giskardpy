@@ -182,7 +182,7 @@ class BehaviorTreeConfig(ABC):
 class StandAloneBTConfig(BehaviorTreeConfig):
     def __init__(self,
                  debug_mode: bool = False,
-                 publish_js: bool = False,
+                 publish_js: bool = True,
                  publish_free_variables: bool = False,
                  publish_tf: bool = True,
                  include_prefix: bool = False,
