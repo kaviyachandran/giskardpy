@@ -1,12 +1,14 @@
 <launch>
     <param name="robot_description" textfile="$(find simulate_scenes)/model/cups.urdf" />
+<!--     <node pkg="robot_state_publisher" type="robot_state_publisher" name="state" /> -->
+<!--     <node pkg="joint_state_publisher" type="joint_state_publisher" name="joint_state" /> -->
 
     <node pkg="giskardpy" type="ballbot_standalone.py" name="giskard" output="screen" />
 
     <node pkg="giskardpy" type="interactive_marker.py" name="giskard_interactive_marker" output="screen">
         <rosparam param="enable_self_collision">False</rosparam>
         <rosparam param="interactive_marker_chains">
-            - [map, ball_link]
+            - [map, free_cup]
         </rosparam>
     </node>
 

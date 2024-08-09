@@ -7,7 +7,7 @@ from giskard_msgs.msg import MoveResult
 # init ros node
 rospy.init_node('test')
 giskard_wrapper = GiskardWrapper()
-obj = "ball_link"
+obj = "free_cup"
 rospy.loginfo('Set a Cartesian goal for the box')
 obj_goal = PoseStamped()
 obj_goal.header.frame_id = obj
@@ -26,5 +26,5 @@ result: MoveResult = giskard_wrapper.execute()
 if isinstance(result, MoveResult):
     print("there is something: ", result.error.code)
     for i in result.trajectory.points:
-        print(i.positions)
+        print("ha ", i.positions)
 rospy.loginfo('Goal reached')
