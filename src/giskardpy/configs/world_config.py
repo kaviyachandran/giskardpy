@@ -115,7 +115,7 @@ class WorldConfig(ABC):
         return group_name
 
     def add_robot_from_parameter_server(self,
-                                        parameter_name: str = 'pr2/robot_description',
+                                        parameter_name: str = 'robot_description',
                                         group_name: Optional[str] = None) -> str:
         """
         Add a robot urdf from parameter server to Giskard.

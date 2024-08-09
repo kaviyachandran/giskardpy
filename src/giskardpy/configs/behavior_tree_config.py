@@ -161,11 +161,11 @@ class BehaviorTreeConfig(ABC):
         Publishes joint states for Giskard's internal state.
         """
         god_map.tree.control_loop_branch.publish_state.add_joint_state_publisher(include_prefix=include_prefix,
-                                                                                 topic_name=topic_name,
-                                                                                 only_prismatic_and_revolute=True)
+                                                                                 topic_name=topic_name)
+                                                                                 # only_prismatic_and_revolute=True)
         god_map.tree.wait_for_goal.publish_state.add_joint_state_publisher(include_prefix=include_prefix,
-                                                                           topic_name=topic_name,
-                                                                           only_prismatic_and_revolute=True)
+                                                                           topic_name=topic_name)
+                                                                           # only_prismatic_and_revolute=True)
 
     def add_free_variable_publisher(self, topic_name: Optional[str] = None, include_prefix: bool = False):
         """
