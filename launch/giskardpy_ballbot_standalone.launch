@@ -1,5 +1,5 @@
 <launch>
-    <param name="robot_description" textfile="$(find simulate_scenes)/model/freejoint_ball.urdf" />
+    <param name="robot_description" textfile="$(find simulate_scenes)/model/cups.urdf" />
 
     <node pkg="giskardpy" type="ballbot_standalone.py" name="giskard" output="screen" />
 
