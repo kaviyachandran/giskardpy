@@ -495,9 +495,32 @@ class TestAddObject:
 
 class TestActionGoals:
     def test_pouring_action(self, zero_pose):
-        zero_pose.motion_goals.add_motion_goal(motion_goal_class='PouringAction2',
-                                               tip_link='hand_palm_link',
-                                               root_link='map')
+        goal_pose = PoseStamped()
+        goal_pose.header.frame_id = 'map'
+        goal_pose.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, 1, 0],
+                                                                         [0, -1, 0, 0],
+                                                                         [1, 0, 0, 0],
+                                                                         [0, 0, 0, 1]]))
+        goal_pose.pose.position.x = 1.95
+        goal_pose.pose.position.y = -0.4
+        goal_pose.pose.position.z = 0.49
+        # goal_pose.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, 1, 0],
+        #                                                                  [0, -1, 0, 0],
+        #                                                                  [1, 0, 0, 0],
+        #                                                                  [0, 0, 0, 1]]))
+        tilt_axis = Vector3Stamped()
+        tilt_axis.header.frame_id = 'hand_palm_link'
+        tilt_axis.vector.z = 1
+        zero_pose.motion_goals.add_motion_goal(motion_goal_class=PouringAdaptiveTilt.__name__,
+                                               name='pouring',
+                                               tip='hand_palm_link',
+                                               root='map',
+                                               tilt_angle=2,
+                                               pouring_pose=goal_pose,
+                                               tilt_axis=tilt_axis,
+                                               pre_tilt=False,
+                                               with_feedback=False)
+        zero_pose.allow_all_collisions()
         zero_pose.execute(add_local_minimum_reached=False)
 
     def test_complete_pouring(self, zero_pose):
