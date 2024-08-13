@@ -26,6 +26,18 @@ class BallBotJointTrajServerMujocoInterface(RobotInterfaceConfig):
             namespace='/ballbot/whole_body_controller')
 
 
+class BallBotVelocityInterface(RobotInterfaceConfig):
+    def setup(self):
+        self.sync_joint_state_topic('/ballbot/joint_states')
+        self.add_joint_velocity_controller(namespaces=['ballbot/transx_velocity_controller',
+                                                       'ballbot/transy_velocity_controller',
+                                                       'ballbot/transz_velocity_controller',
+                                                       'ballbot/rotx_velocity_controller',
+                                                       'ballbot/roty_velocity_controller',
+                                                       'ballbot/rotz_velocity_controller'
+                                                       ])
+
+
 class BallBotStandAloneRobotInterfaceConfig(StandAloneRobotInterfaceConfig):
     def __init__(self):
         super().__init__([
