@@ -1,7 +1,7 @@
 import numpy as np
 import rospy
 
-from geometry_msgs.msg import TransformStamped, QuaternionStamped, PointStamped
+from geometry_msgs.msg import TransformStamped, QuaternionStamped, PointStamped, PoseStamped, Vector3Stamped
 from std_msgs.msg import String
 
 from giskardpy.python_interface.python_interface import GiskardWrapper
@@ -33,7 +33,7 @@ from tf.transformations import euler_from_quaternion, quaternion_from_euler
 class GiskardListener(object):
 
     def __init__(self):
-        rospy.Subscriber('/reasoner/concluded_behaviors', String, self.reasoner_callback)
+        # rospy.Subscriber('/reasoner/concluded_behaviors', String, self.reasoner_callback)
 
         self.change_in_orientation = (5 / 180) * 3.14  # 5 degrees
         self.change_in_position = 0.05  # 5 cm
@@ -42,6 +42,34 @@ class GiskardListener(object):
         self.giskard = GiskardWrapper()
         self.source = 'free_cup'
         self.dest = 'free_cup2'
+        self.root = 'map'
+
+    def adaptive_tilt(self):
+
+        p = PoseStamped()
+
+        p.header.frame_id = 'free_cup2'
+        p = lookup_pose(self.root, self.dest)
+        p.pose.position.z = p.pose.position.z + 0.05
+
+        # goal_pose.pose.position.x = 1.95
+        # goal_pose.pose.position.y = -0.4
+        # goal_pose.pose.position.z = 0.49
+        # goal_pose.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, 1, 0],
+        #                                                                  [0, -1, 0, 0],
+        #                                                                  [1, 0, 0, 0],
+        #                                                                  [0, 0, 0, 1]]))
+        tilt_axis = Vector3Stamped()
+        tilt_axis.header.frame_id = 'free_cup'
+        tilt_axis.vector.x = 1
+
+        self.giskard.add_adaptive_pouring(name='pouring',
+                                          tip='free_cup',
+                                          root='map',
+                                          tilt_angle=1,
+                                          pouring_pose=p,
+                                          tilt_axis=tilt_axis)
+        self.giskard.execute()
 
     def tilt(self, pose, change: str, rotation_dir: np.array = np.array([])):
         print(f"self.dest pose: {pose.transform.translation, pose.transform.rotation}")
@@ -205,6 +233,7 @@ class GiskardListener(object):
 if __name__ == "__main__":
     rospy.init_node('giskard_listener')
     listener = GiskardListener()
+    listener.adaptive_tilt()
     rate = rospy.Rate(10)  # 10hz
     while not rospy.is_shutdown():
         rate.sleep()
