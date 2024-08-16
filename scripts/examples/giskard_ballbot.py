@@ -5,6 +5,7 @@ from geometry_msgs.msg import TransformStamped, QuaternionStamped, PointStamped,
 from std_msgs.msg import String
 
 from giskardpy.python_interface.python_interface import GiskardWrapper
+from giskardpy.goals.adaptive_goals import PouringAdaptiveTilt
 from giskardpy.utils.tfwrapper import lookup_transform, lookup_pose
 from giskard_msgs.msg import MoveResult
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
@@ -63,12 +64,13 @@ class GiskardListener(object):
         tilt_axis.header.frame_id = 'free_cup'
         tilt_axis.vector.x = 1
 
-        self.giskard.add_adaptive_pouring(name='pouring',
-                                          tip='free_cup',
-                                          root='map',
-                                          tilt_angle=1,
-                                          pouring_pose=p,
-                                          tilt_axis=tilt_axis)
+        self.giskard.motion_goals.add_motion_goal(goal=PouringAdaptiveTilt(),
+                                                  name='pouring',
+                                                  tip='free_cup',
+                                                  root='map',
+                                                  tilt_angle=1,
+                                                  pouring_pose=p,
+                                                  tilt_axis=tilt_axis)
         self.giskard.execute()
 
     def tilt(self, pose, change: str, rotation_dir: np.array = np.array([])):

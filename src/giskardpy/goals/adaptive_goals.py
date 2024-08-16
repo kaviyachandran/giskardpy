@@ -224,8 +224,8 @@ class PouringAdaptiveTilt(Goal):
         is_y_back = symbol_manager.get_symbol(f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].move_y_back')
         is_up = symbol_manager.get_symbol(f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].up')
         is_down = symbol_manager.get_symbol(f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].down')
-        root_V_adapt = cas.Vector3([0.002 * is_x - 0.002 * is_x_back,
-                                    0.002 * is_y - 0.002 * is_y_back,
+        root_V_adapt = cas.Vector3([0.02 * is_x - 0.02 * is_x_back,
+                                    0.02 * is_y - 0.02 * is_y_back,
                                     0.01 * is_up - 0.01 * is_down,
                                     ])
         adapt_pos_task.add_equality_constraint_vector(reference_velocities=[self.max_vel] * 3,
