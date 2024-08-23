@@ -6,6 +6,7 @@ from std_msgs.msg import String
 
 from giskardpy.python_interface.python_interface import GiskardWrapper
 from giskardpy.goals.pouring import AdaptivePouring
+from giskardpy.tasks.task import Task
 from giskardpy.utils.tfwrapper import lookup_transform, lookup_pose
 from giskard_msgs.msg import MoveResult
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
@@ -41,10 +42,13 @@ root = 'map'
 def adaptive_tilt():
     print("in adaptive tilt")
     dest_pose = PoseStamped()
+    dest_dim = (0.06, 0.06, 0.18)
 
     dest_pose.header.frame_id = 'free_cup2'
     dest_pose = lookup_pose(root, dest)
-    dest_pose.pose.position.z = dest_pose.pose.position.z + 0.09
+    dest_pose.pose.position.x = dest_pose.pose.position.x + dest_dim[0]/2
+    dest_pose.pose.position.y = dest_pose.pose.position.y + dest_dim[1]*2
+    dest_pose.pose.position.z = dest_pose.pose.position.z + dest_dim[2]/2 + 0.03
 
     src_pose = PoseStamped()
 
@@ -61,8 +65,8 @@ def adaptive_tilt():
     #                                                                  [0, 0, 0, 1]]))
 
     map_P_dest_top_corner = PointStamped()
-    map_P_dest_top_corner.point.x = dest_pose.pose.position.x + 0.03/2
-    map_P_dest_top_corner.point.y = dest_pose.pose.position.y - 0.03/2
+    map_P_dest_top_corner.point.x = dest_pose.pose.position.x + 0.03 / 2
+    map_P_dest_top_corner.point.y = dest_pose.pose.position.y - 0.03 / 2
     map_P_dest_top_corner.point.z = dest_pose.pose.position.z
 
     dest_V_src = [map_P_dest_top_corner.point.x - src_pose.pose.position.x,
@@ -70,8 +74,18 @@ def adaptive_tilt():
                   map_P_dest_top_corner.point.y - src_pose.pose.position.z]
     tilt_axis = Vector3Stamped()
     tilt_axis.header.frame_id = 'free_cup'
-    tilt_axis.vector.x = dest_V_src[0]
-    tilt_axis.vector.y = dest_V_src[1]
+    tilt_axis.vector.x = 1      # dest_V_src[0]
+    # tilt_axis.vector.y = 0       # dest_V_src[1]
+
+    goal_point: PointStamped = PointStamped()
+    goal_point.header.frame_id = 'map'
+    goal_point.point.x = dest_pose.pose.position.x
+    goal_point.point.y = dest_pose.pose.position.y + 0.03
+    goal_point.point.z = dest_pose.pose.position.z + 0.09
+
+    # giskard.motion_goals.add_cartesian_position(goal_point=goal_point,
+    #                                             tip_link=source,
+    #                                             root_link=root)
 
     giskard.motion_goals.add_motion_goal(motion_goal_class=AdaptivePouring.__name__,
                                          name='pouring',
