@@ -64,18 +64,24 @@ def adaptive_tilt():
     #                                                                  [1, 0, 0, 0],
     #                                                                  [0, 0, 0, 1]]))
 
-    map_P_dest_top_corner = PointStamped()
-    map_P_dest_top_corner.point.x = dest_pose.pose.position.x + 0.03 / 2
-    map_P_dest_top_corner.point.y = dest_pose.pose.position.y - 0.03 / 2
-    map_P_dest_top_corner.point.z = dest_pose.pose.position.z
+    map_P_dest_side_toward_src = PointStamped()
+    map_P_dest_side_toward_src.point.x = dest_pose.pose.position.x
+    map_P_dest_side_toward_src.point.y = dest_pose.pose.position.y - 0.03 / 2
+    map_P_dest_side_toward_src.point.z = dest_pose.pose.position.z
 
-    dest_V_src = [map_P_dest_top_corner.point.x - src_pose.pose.position.x,
-                  map_P_dest_top_corner.point.y - src_pose.pose.position.y,
-                  map_P_dest_top_corner.point.y - src_pose.pose.position.z]
+    map_P_src_side_toward_dest = PointStamped()
+    map_P_src_side_toward_dest.point.x = src_pose.pose.position.x
+    map_P_src_side_toward_dest.point.y = src_pose.pose.position.y + 0.03 / 2
+    map_P_src_side_toward_dest.point.z = src_pose.pose.position.z
+
+    dest_V_src = [map_P_dest_side_toward_src.point.x - map_P_src_side_toward_dest.point.x,
+                  map_P_dest_side_toward_src.point.y - map_P_src_side_toward_dest.point.y,
+                  map_P_dest_side_toward_src.point.y - map_P_src_side_toward_dest.point.z]
     tilt_axis = Vector3Stamped()
     tilt_axis.header.frame_id = 'free_cup'
-    tilt_axis.vector.x = 1      # dest_V_src[0]
-    # tilt_axis.vector.y = 0       # dest_V_src[1]
+    tilt_axis.vector.x = 0.7071
+    tilt_axis.vector.y = -0.7071
+    tilt_axis.vector.z = 0
 
     goal_point: PointStamped = PointStamped()
     goal_point.header.frame_id = 'map'

@@ -28,10 +28,18 @@ class AdaptivePouring(Goal):
                  tip_link,
                  pouring_pose: PoseStamped,
                  tilt_axis: Vector3Stamped,
+                 trans_x_velocity: float = 0.02,
+                 trans_y_velocity: float = 0.02,
+                 trans_z_velocity: float = 0.01,
+                 trans_back_x_velocity: float = 0.02,
+                 trans_back_y_velocity: float = 0.02,
+                 trans_back_z_velocity: float = 0.01,
+                 tilt_forward: float = 0.3,  # 0.3 degree
+                 tilt_backward: float = 2,  # 2 degree
                  use_local_min=False,
                  tilt_angle: float = 1,
                  min_vel=-0.1,
-                 max_vel=0.3,
+                 max_vel=0.2,
                  weight=WEIGHT_COLLISION_AVOIDANCE,
                  dest_link="free_cup",
                  pre_tilt=False,
@@ -54,6 +62,15 @@ class AdaptivePouring(Goal):
         self.tip = tip_link
         self.max_vel = max_vel
         self.min_vel = min_vel
+        self.trans_x_velocity = trans_x_velocity
+        self.trans_y_velocity = trans_y_velocity
+        self.trans_z_velocity = trans_z_velocity
+        self.trans_back_x_velocity = trans_back_x_velocity
+        self.trans_back_y_velocity = trans_back_y_velocity
+        self.trans_back_z_velocity = trans_back_z_velocity
+        self.tilt_forward_velocity = tilt_forward
+        self.tilt_backward_velocity = tilt_backward
+
         self.weight = weight
         self.use_local_min = use_local_min
 
@@ -165,12 +182,12 @@ class AdaptivePouring(Goal):
         angle = cas.rotational_error(root_R_tip, root_R_tip_desired_pre)
         # TODO: how can the speed of a rotation be controlled from the outside?
         if self.tilt_angle < 0:
-            angle_a = -0.2 * is_forward + 2 * is_backward
+            angle_a = -self.tilt_forward_velocity * is_forward + self.tilt_backward_velocity * is_backward
             stop_too_large = cas.logic_any(
                 cas.Expression([cas.if_greater(angle, 3, 0, 1), cas.if_greater(angle_a, 0, 1, 0)]))
             stop_too_small = cas.if_less(angle, 0.1, 0, 1)
         else:
-            angle_a = 0.3 * is_forward - 2 * is_backward
+            angle_a = self.tilt_forward_velocity * is_forward - self.tilt_backward_velocity * is_backward
             stop_too_large = cas.logic_any(
                 cas.Expression([cas.if_greater(angle, 3, 0, 1), cas.if_less(angle_a, 0, 1, 0)]))
             stop_too_small = cas.logic_any(
@@ -178,11 +195,11 @@ class AdaptivePouring(Goal):
         tip_R_tip_a = cas.RotationMatrix().from_axis_angle(tip_V_tilt_axis, angle_a)
 
         # rotation around z axis
-        is_rot_1 = symbol_manager.get_symbol(f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].z_rot_1')
-        is_rot_2 = symbol_manager.get_symbol(f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].z_rot_2')
-        angle_z = -0.03 * is_rot_1 + 0.03 * is_rot_2
-        tip_R_tip2 = cas.RotationMatrix().from_axis_angle(cas.Vector3([0, 0, 1]), angle_z)
-        root_R_tip_desired_a = root_R_tip.dot(tip_R_tip_a).dot(tip_R_tip2)
+        # is_rot_1 = symbol_manager.get_symbol(f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].z_rot_1')
+        # is_rot_2 = symbol_manager.get_symbol(f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].z_rot_2')
+        # angle_z = -0.03 * is_rot_1 + 0.03 * is_rot_2
+        # tip_R_tip2 = cas.RotationMatrix().from_axis_angle(cas.Vector3([0, 0, 1]), angle_z)
+        root_R_tip_desired_a = root_R_tip.dot(tip_R_tip_a)   #.dot(tip_R_tip2)
         # TODO: look into slerp again. Is that necessary here?
         # TODO: Try this with quaternions instead!
         adaptive_task.add_rotation_goal_constraints(frame_R_current=root_R_tip,
@@ -259,25 +276,25 @@ class AdaptivePouring(Goal):
         is_y_back = symbol_manager.get_symbol(f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].move_y_back')
         is_up = symbol_manager.get_symbol(f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].up')
         is_down = symbol_manager.get_symbol(f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].down')
-        root_V_adapt = cas.Vector3([0.02 * is_x - 0.02 * is_x_back,
-                                    0.02 * is_y - 0.02 * is_y_back,
-                                    0.01 * is_up - 0.01 * is_down,
+        root_V_adapt = cas.Vector3([self.trans_x_velocity * is_x - self.trans_back_x_velocity * is_x_back,
+                                    self.trans_y_velocity * is_y - self.trans_back_y_velocity * is_y_back,
+                                    self.trans_z_velocity * is_up - self.trans_back_z_velocity * is_down,
                                     ])
         god_map.debug_expression_manager.add_debug_expression('root_V_adapt', root_V_adapt)
 
-        # move_to = ExpressionMonitor(name='moveTo')
-        # move_to.expression = symbol_manager.get_symbol(
-        #     f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].move_to')
-        # self.add_monitor(move_to)
-        # move_to_task = self.create_and_add_task('move_to_task')
-        # move_to_task.start_condition = nominal_monitor
-        # move_to_task.hold_condition = cas.logic_not(move_to.get_state_expression())
-        # # if self.move_to:
-        # move_to_task.add_point_goal_constraints(frame_P_current=root_T_tip.to_position(),
-        #                                         frame_P_goal=root_P_goal,
-        #                                         name="position_constraint",
-        #                                         reference_velocity=self.max_vel,
-        #                                         weight=self.weight)
+        move_to = ExpressionMonitor(name='moveTo')
+        move_to.expression = symbol_manager.get_symbol(
+            f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].move_to')
+        self.add_monitor(move_to)
+        move_to_task = self.create_and_add_task('move_to_task')
+        move_to_task.start_condition = pos_monitor
+        move_to_task.hold_condition = cas.logic_not(move_to.get_state_expression())
+        # if self.move_to:
+        move_to_task.add_point_goal_constraints(frame_P_current=root_T_tip.to_position(),
+                                                frame_P_goal=root_P_goal,
+                                                name="position_constraint",
+                                                reference_velocity=self.max_vel,
+                                                weight=self.weight)
 
         adapt_pos_task.add_equality_constraint_vector(reference_velocities=[self.max_vel] * 3,
                                                       equality_bounds=root_V_adapt[:3],
@@ -307,7 +324,7 @@ class AdaptivePouring(Goal):
             f'god_map.motion_goal_manager.motion_goals[\'{str(self)}\'].stop')
         adaptive_task.end_condition = external_end_monitor
         adapt_pos_task.end_condition = external_end_monitor
-        # move_to_task.end_condition = external_end_monitor
+        move_to_task.end_condition = external_end_monitor
         # self.pos_task.add_to_end_monitor(external_end_monitor)
         god_map.debug_expression_manager.add_debug_expression('increase', is_forward)
         god_map.debug_expression_manager.add_debug_expression('decrease', is_backward)
@@ -317,8 +334,8 @@ class AdaptivePouring(Goal):
         god_map.debug_expression_manager.add_debug_expression('moveRight', is_y_back)
         god_map.debug_expression_manager.add_debug_expression('up', is_up)
         god_map.debug_expression_manager.add_debug_expression('down', is_down)
-        god_map.debug_expression_manager.add_debug_expression('rot1', is_rot_1)
-        god_map.debug_expression_manager.add_debug_expression('rot2', is_rot_2)
+        # god_map.debug_expression_manager.add_debug_expression('rot1', is_rot_1)
+        # god_map.debug_expression_manager.add_debug_expression('rot2', is_rot_2)
         god_map.debug_expression_manager.add_debug_expression('stop', self.stop)
         god_map.debug_expression_manager.add_debug_expression('tilt_axis',
                                                               cas.Vector3(self.tilt_axis))
@@ -346,8 +363,8 @@ class AdaptivePouring(Goal):
         self.down = False
         self.move_to = False
 
-        # if 'moveTowards' in action_string.data:
-        #     self.move_to = True
+        if 'moveTowards' in action_string.data:
+            self.move_to = True
         if 'moveForward' in action_string.data:
             self.move_x = True
         if 'moveBack' in action_string.data:
