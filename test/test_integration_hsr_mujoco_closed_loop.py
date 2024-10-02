@@ -20,6 +20,7 @@ from giskardpy.goals.manipulability_goals import MaxManipulability
 import giskardpy.utils.tfwrapper as tf
 from giskardpy.goals.action_goals import PouringAction
 from giskardpy.goals.adaptive_goals import CloseGripper, PouringAdaptiveTilt
+from giskardpy.god_map import god_map
 
 
 class HSRTestWrapper(GiskardTestWrapper):
@@ -528,6 +529,22 @@ class TestActionGoals:
 
         zero_pose.motion_goals.add_motion_goal(motion_goal_class=CloseGripper.__name__,
                                                name='closeGripper', effort=-220)
+        zero_pose.allow_all_collisions()
+        zero_pose.execute()
+
+        tip_link = "head_camera_frame"
+        obj_link = "free_cup2"
+        goal_point = PointStamped()              # god_map.world.compute_fk_point(root='odom', tip=obj_link)
+        goal_point.header.stamp = rospy.Time()
+        goal_point.header.frame_id = obj_link
+        goal_point.point.x = 2
+        goal_point.point.y = -0.6
+        goal_point.point.z = 0.55
+        pointing_axis = Vector3Stamped()
+        pointing_axis.header.frame_id = tip_link
+        pointing_axis.vector.z = -1
+        zero_pose.set_pointing_goal(tip_link=tip_link, goal_point=goal_point, root_link=zero_pose.default_root,
+                                    pointing_axis=pointing_axis)
         zero_pose.allow_all_collisions()
         zero_pose.execute()
 
