@@ -554,7 +554,7 @@ class TestActionGoals:
         cup_pose.pose.orientation.w = 1
 
         # add a new object at the pose of the pot and attach it to the right tip
-        zero_pose.add_box('cup1', (0.07, 0.07, 0.28), pose=cup_pose, parent_link='hand_palm_link')
+        zero_pose.add_box('cup1', (0.07, 0.07, 0.18), pose=cup_pose, parent_link='hand_palm_link')
         cup_pose.header.frame_id = 'free_cup2'
         zero_pose.add_box('cup2', (0.07, 0.07, 0.18), pose=cup_pose, parent_link='map')
 
@@ -570,6 +570,35 @@ class TestActionGoals:
         #                                                                  [0, -1, 0, 0],
         #                                                                  [1, 0, 0, 0],
         #                                                                  [0, 0, 0, 1]]))
+        infront_cup_position = Point()
+        infront_cup_position.x = 1.2
+        infront_cup_position.y = -0.4
+
+        base_goal = PointStamped()
+        base_goal.header.frame_id = 'odom'
+        base_goal.point = infront_cup_position
+        tip_link_to_move = "base_link"
+        zero_pose.set_translation_goal(tip_link=tip_link_to_move, goal_point=base_goal,
+                                       root_link=zero_pose.default_root)
+        # zero_pose.allow_all_collisions()
+        # zero_pose.execute()
+
+        tip_link = "head_camera_frame"
+        # obj_link = "free_cup2"
+        goal_point = god_map.world.compute_fk_point(root='odom', tip="hand_palm_link")
+        goal_point.header.stamp = rospy.Time()
+        goal_point.header.frame_id = "odom"
+        goal_point.point.x = 2
+        goal_point.point.y = -0.6
+        goal_point.point.z = 0.4
+        pointing_axis = Vector3Stamped()
+        pointing_axis.header.frame_id = tip_link
+        pointing_axis.vector.z = -1
+        zero_pose.set_pointing_goal(tip_link=tip_link, goal_point=goal_point, root_link=zero_pose.default_root,
+                                    pointing_axis=pointing_axis)
+        zero_pose.allow_all_collisions()
+        zero_pose.execute()
+
         tilt_axis = Vector3Stamped()
         tilt_axis.header.frame_id = 'hand_palm_link'
         tilt_axis.vector.z = 1
@@ -577,12 +606,12 @@ class TestActionGoals:
                                                name='pouring',
                                                tip='hand_palm_link',
                                                root='map',
-                                               tilt_angle=0.3,
+                                               tilt_angle=0.4,
                                                pouring_pose=goal_pose,
                                                tilt_axis=tilt_axis,
                                                pre_tilt=False)
         zero_pose.allow_all_collisions()
-        zero_pose.avoid_collision(0.01, 'cup1', 'cup2')
+        zero_pose.avoid_collision(0.003, 'cup1', 'cup2')
         zero_pose.execute(add_local_minimum_reached=False)
 
         goal_pose.pose.position.x = 1.93
