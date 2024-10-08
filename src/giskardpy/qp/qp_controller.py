@@ -1032,9 +1032,9 @@ class QPProblemBuilder:
         if manipulability_constraints is not None:
             self.add_manipulability_constraints(manipulability_constraints)
 
-        if solver_id is not None:
-            self.qp_solver_class = available_solvers[solver_id]
-        else:
+        # if solver_id is not None:
+        #     self.qp_solver_class = available_solvers[solver_id]
+        if True:
             for solver_id in SupportedQPSolver:
                 if solver_id in available_solvers:
                     self.qp_solver_class = available_solvers[solver_id]

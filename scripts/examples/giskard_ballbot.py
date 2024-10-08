@@ -1,15 +1,17 @@
 import numpy as np
 import rospy
 
-from geometry_msgs.msg import TransformStamped, QuaternionStamped, PointStamped, PoseStamped, Vector3Stamped, Point
+from geometry_msgs.msg import TransformStamped, QuaternionStamped, PointStamped, PoseStamped, Vector3Stamped, Point, \
+    Quaternion
 from std_msgs.msg import String
 
+from giskardpy.god_map import god_map
 from giskardpy.python_interface.python_interface import GiskardWrapper
-from giskardpy.goals.pouring import AdaptivePouring
+from giskardpy.goals.adaptive_goals import PouringAdaptiveTilt, CloseGripper
 from giskardpy.tasks.task import Task
 from giskardpy.utils.tfwrapper import lookup_transform, lookup_pose
 from giskard_msgs.msg import MoveResult
-from tf.transformations import euler_from_quaternion, quaternion_from_euler
+from tf.transformations import euler_from_quaternion, quaternion_from_euler, quaternion_from_matrix
 
 # obj_goal = PoseStamped()
 # obj_goal.header.frame_id = self.source
@@ -36,65 +38,141 @@ giskard = GiskardWrapper()
 
 source = 'free_cup'
 dest = 'free_cup2'
-root = 'map'
+root = 'odom'
 
 
 def adaptive_tilt():
-    print("in adaptive tilt")
-    dest_pose = PoseStamped()
-    dest_dim = (0.06, 0.06, 0.18)
+    # print("in adaptive tilt")
+    # dest_pose = PoseStamped()
+    # dest_dim = (0.06, 0.06, 0.18)
+    #
+    # dest_pose.header.frame_id = 'free_cup2'
+    # dest_pose = lookup_pose(root, dest)
+    # dest_pose.pose.position.x = dest_pose.pose.position.x + dest_dim[0]/2
+    # dest_pose.pose.position.y = dest_pose.pose.position.y + dest_dim[1]*2
+    # dest_pose.pose.position.z = dest_pose.pose.position.z + dest_dim[2]/2 + 0.03
+    #
+    # src_pose = PoseStamped()
+    #
+    # src_pose.header.frame_id = 'free_cup'
+    # src_pose = lookup_pose(root, source)
+    # src_pose.pose.position.z = src_pose.pose.position.z + 0.09
+    #
+    # # goal_pose.pose.position.x = 1.95
+    # # goal_pose.pose.position.y = -0.4
+    # # goal_pose.pose.position.z = 0.49
+    # # goal_pose.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, 1, 0],
+    # #                                                                  [0, -1, 0, 0],
+    # #                                                                  [1, 0, 0, 0],
+    # #                                                                  [0, 0, 0, 1]]))
+    #
+    # map_P_dest_top_corner = PointStamped()
+    # map_P_dest_top_corner.point.x = dest_pose.pose.position.x + 0.03 / 2
+    # map_P_dest_top_corner.point.y = dest_pose.pose.position.y - 0.03 / 2
+    # map_P_dest_top_corner.point.z = dest_pose.pose.position.z
+    #
+    # dest_V_src = [map_P_dest_top_corner.point.x - src_pose.pose.position.x,
+    #               map_P_dest_top_corner.point.y - src_pose.pose.position.y,
+    #               map_P_dest_top_corner.point.y - src_pose.pose.position.z]
 
-    dest_pose.header.frame_id = 'free_cup2'
-    dest_pose = lookup_pose(root, dest)
-    dest_pose.pose.position.x = dest_pose.pose.position.x + dest_dim[0]/2
-    dest_pose.pose.position.y = dest_pose.pose.position.y + dest_dim[1]*2
-    dest_pose.pose.position.z = dest_pose.pose.position.z + dest_dim[2]/2 + 0.03
+    goal_pose = PoseStamped()
+    goal_pose.header.frame_id = 'odom'
+    goal_pose.pose.orientation = Quaternion(*quaternion_from_matrix([[1, 0, 0, 0],
+                                                                     [0, 1, 0, 0],
+                                                                     [0, 0, 1, 0],
+                                                                     [0, 0, 0, 1]]))
 
-    src_pose = PoseStamped()
+    goal_pose.pose.position.x = 1.0
+    goal_pose.pose.position.y = -0.2
+    goal_pose.pose.position.z = 0.0
 
-    src_pose.header.frame_id = 'free_cup'
-    src_pose = lookup_pose(root, source)
-    src_pose.pose.position.z = src_pose.pose.position.z + 0.09
+    giskard.motion_goals.add_cartesian_pose(goal_pose, 'base_link', 'odom')
+    giskard.motion_goals.allow_all_collisions()
+    giskard.add_default_end_motion_conditions()
+    giskard.execute()
+    # first start related scripts for BB detection and scene action reasoning
+    giskard.motion_goals.add_motion_goal(motion_goal_class=CloseGripper.__name__,
+                                         name='openGripper',
+                                         as_open=True,
+                                         velocity_threshold=100,
+                                         effort_threshold=1,
+                                         effort=100)
+    giskard.motion_goals.allow_all_collisions()
+    giskard.add_default_end_motion_conditions()
+    giskard.execute()
 
-    # goal_pose.pose.position.x = 1.95
+    goal_pose = PoseStamped()
+    goal_pose.header.frame_id = 'map'
+    goal_pose.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, 1, 0],
+                                                                     [0, -1, 0, 0],
+                                                                     [1, 0, 0, 0],
+                                                                     [0, 0, 0, 1]]))
+    goal_pose.pose.position.x = 1.95
+    goal_pose.pose.position.y = -0.2
+    goal_pose.pose.position.z = 0.3
+
+    giskard.motion_goals.add_cartesian_pose(goal_pose, 'hand_palm_link', 'map')
+    giskard.motion_goals.allow_all_collisions()
+    giskard.add_default_end_motion_conditions()
+    giskard.execute()
+
+    giskard.motion_goals.add_motion_goal(motion_goal_class=CloseGripper.__name__,
+                                         name='closeGripper', effort=-220)
+    giskard.motion_goals.allow_all_collisions()
+    giskard.add_default_end_motion_conditions()
+    giskard.execute()
+
+    cup_pose = PoseStamped()
+    cup_pose.header.frame_id = 'free_cup'
+    cup_pose.pose.position = Point(0, 0, 0)
+    cup_pose.pose.orientation.w = 1
+
+    # add a new object at the pose of the pot and attach it to the right tip
+    giskard.world.add_box('cup1', (0.07, 0.07, 0.28), pose=cup_pose, parent_link='hand_palm_link')
+    cup_pose.header.frame_id = 'free_cup2'
+    giskard.world.add_box('cup2', (0.07, 0.07, 0.18), pose=cup_pose, parent_link='map')
+
+    # goal_pose.pose.position.x = 1.85
+    # goal_pose.pose.position.y = -0.7
+    # goal_pose.pose.position.z = 0.54
+    # goal_pose.pose.position.x = 1.75
     # goal_pose.pose.position.y = -0.4
-    # goal_pose.pose.position.z = 0.49
-    # goal_pose.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, 1, 0],
-    #                                                                  [0, -1, 0, 0],
-    #                                                                  [1, 0, 0, 0],
-    #                                                                  [0, 0, 0, 1]]))
+    # goal_pose.pose.position.z = 0.6
+    goal_pose.header.frame_id = 'cup2'
+    goal_pose.pose.position = Point(-0.02, 0.12, 0.2)
 
-    map_P_dest_top_corner = PointStamped()
-    map_P_dest_top_corner.point.x = dest_pose.pose.position.x + 0.03 / 2
-    map_P_dest_top_corner.point.y = dest_pose.pose.position.y - 0.03 / 2
-    map_P_dest_top_corner.point.z = dest_pose.pose.position.z
+    tip_link = "head_camera_frame"
+    # obj_link = "free_cup2"
+    goal_point = PointStamped()  # lookup_pose('odom', "hand_palm_link")
+    goal_point.header.stamp = rospy.Time()
+    goal_point.header.frame_id = root
+    goal_point.point.x = 2
+    goal_point.point.y = -0.6
+    goal_point.point.z = 0.4
+    pointing_axis = Vector3Stamped()
+    pointing_axis.header.frame_id = tip_link
+    pointing_axis.vector.z = -1
+    giskard.motion_goals.add_pointing(tip_link=tip_link, goal_point=goal_point, root_link="odom",
+                                      pointing_axis=pointing_axis)
+    giskard.motion_goals.allow_all_collisions()
+    giskard.add_default_end_motion_conditions()
+    giskard.execute()
 
-    dest_V_src = [map_P_dest_top_corner.point.x - src_pose.pose.position.x,
-                  map_P_dest_top_corner.point.y - src_pose.pose.position.y,
-                  map_P_dest_top_corner.point.y - src_pose.pose.position.z]
     tilt_axis = Vector3Stamped()
-    tilt_axis.header.frame_id = 'free_cup'
-    tilt_axis.vector.x = 1      # dest_V_src[0]
-    # tilt_axis.vector.y = 0       # dest_V_src[1]
-
-    goal_point: PointStamped = PointStamped()
-    goal_point.header.frame_id = 'map'
-    goal_point.point.x = dest_pose.pose.position.x
-    goal_point.point.y = dest_pose.pose.position.y + 0.03
-    goal_point.point.z = dest_pose.pose.position.z + 0.09
-
-    # giskard.motion_goals.add_cartesian_position(goal_point=goal_point,
-    #                                             tip_link=source,
-    #                                             root_link=root)
-
-    giskard.motion_goals.add_motion_goal(motion_goal_class=AdaptivePouring.__name__,
+    tilt_axis.header.frame_id = 'hand_palm_link'
+    tilt_axis.vector.z = 1
+    giskard.motion_goals.add_motion_goal(motion_goal_class='PouringAdaptiveTilt',
                                          name='pouring',
-                                         tip_link='free_cup',
-                                         root_link='map',
-                                         tilt_angle=1,
-                                         pouring_pose=dest_pose,
+                                         tip='hand_palm_link',
+                                         root='map',
+                                         tilt_angle=1.7,
+                                         pouring_pose=goal_pose,
                                          tilt_axis=tilt_axis,
-                                         pre_tilt=True)
+                                         pre_tilt=False,
+                                         with_feedback=False)
+    giskard.motion_goals.allow_all_collisions()
+    # giskard.motion_goals.avoid_collision(0.01, 'cup1', 'cup2')
+    # giskard.add_default_end_motion_conditions()
     giskard.execute()
     print("Done")
 
